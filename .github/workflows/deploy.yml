@@ -6,8 +6,9 @@ on:
       - master  # Change this to your main branch
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -15,27 +16,31 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
     - name: Build and push Docker image
       uses: docker/build-push-action@v2
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
+        tags: athulkjose01/shareride:${{ github.sha }}
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@master
+    - name: SSH to EC2 and Deploy
+      uses: appleboy/scp-action@v0.1.4
       with:
-        host: "13.60.166.171"  
-        username: ubuntu
+        host: "13.60.166.171"        # Replace with your EC2 instance public IP
+        username: "ubuntu"           # Use 'ubuntu' as the username
+        key: ${{ secrets.EC2_KEY }}
+        port: 22
+        source: "athulkjose01/shareride:${{ github.sha }}"
+        target: "/home/ubuntu/myapp" 
+
+    - name: SSH to EC2 and run container
+      uses: appleboy/ssh-action@v0.1.4
+      with:
+        host: "13.60.166.171"        # Replace with your EC2 instance public IP
+        username: "ubuntu"           # Use 'ubuntu' as the username
         key: ${{ secrets.EC2_KEY }}
         script: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
+          docker pull athulkjose01/shareride:${{ github.sha }}
           docker stop shareride || true
           docker rm shareride || true
-          docker run -d --name shareride -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
+          docker run -d --name shareride athulkjose01/shareride:${{ github.sha }}
