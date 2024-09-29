@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareRide - Upcoming and Ongoing Rides</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            margin-bottom: 15px;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: #4CAF50 !important;
+        }
+
+        .nav-link {
+            color: #333 !important;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #4CAF50 !important;
+        }
+
+        .btn-custom {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            background-color: #45a049;
+            border-color: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .frame {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            padding: 2.5rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .frame:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.15);
+        }
+
+        .frame-title {
+            color: #4CAF50;
+            font-size: 2rem;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 15px;
+        }
+
+        .ride-item {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .ride-item:hover {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            transform: translateX(5px);
+        }
+
+        .ride-item:last-child {
+            border-bottom: none;
+        }
+
+        .status {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .no-rides {
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 20px;
+            background-color: #f8d7da;
+            border-radius: 10px;
+        }
+
+        .travel-companions-section {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            padding: 2.5rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .list-group-item {
+            border: none;
+            background-color: #f8f9fa;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .list-group-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .btn-sm {
+            margin: 5px 2px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-sm:hover {
+            transform: translateY(-2px);
+        }
+
+        .request-actions {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+
+        .delete-ride-btn {
+            margin-top: 10px;
+        }
+
+        .companion-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .companion-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .companion-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1><i class="fas fa-car-side"></i> ShareRide</h1>
+        <p class="lead">Upcoming and Ongoing Rides</p>
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'give_rides' %}"><i class="fas fa-plus-circle"></i> Create Ride</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}"><i class="fas fa-comment-dots"></i> ChatBot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'my_account' %}"><i class="fas fa-user"></i> My Account</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> LogOut</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <!-- Left Frame: Ride Giver Side -->
+            <div class="col-md-6">
+                <div class="frame">
+                    <h2 class="frame-title">Ride Giver Side</h2>
+                    <div class="rides-section">
+                        <h3>Ride Requests Received</h3>
+                        {% if user_rides %}
+                            <ul class="list-group">
+                            {% for ride in user_rides %}
+                                <li class="list-group-item ride-item">
+                                    <strong>{{ ride.start_location }} to {{ ride.destination }}</strong><br>
+                                    <i class="fas fa-calendar-alt"></i> Date: {{ ride.ride_date }}<br>
+                                    <i class="fas fa-clock"></i> Starting Time: {{ ride.ride_time }}<br>
+                                    {% if not ride.joinedride_set.exists %}
+                                    <form action="{% url 'delete_ride' ride.id %}" method="post" class="delete-ride-btn">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this ride? This action cannot be undone.')">
+                                            <i class="fas fa-trash-alt"></i> Delete Ride
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <br>
+                                    <h5 class="mt-2">Ride Requests:</h5>
+                                    <ul class="list-unstyled">
+                                    {% for request in ride.riderequest_set.all %}
+                                        <li class="mb-2">
+                                            <div>
+                                                <strong>Request by:</strong> <span class="status">{{ request.user.username }}</span>
+                                            </div>
+                                            <div>
+                                                <strong>Time:</strong> <span class="status">{{ request.ride_time }}</span>
+                                            </div>
+                                            <div>
+                                                <strong>Start Location:</strong> <span class="status">{{ request.start_location }}</span>
+                                            </div>
+                                            <div>
+                                                <strong>End Location:</strong> <span class="status">{{ request.destination }}</span>
+                                            </div>
+                                            <div>
+                                                <strong>Status:</strong> <span class="status">{{ request.status }}</span>
+                                            </div>
+                                            <div class="request-actions mt-2">
+                                                {% if request.status == 'requested' %}
+                                                    <a href="{% url 'accept_request' request.id %}" class="btn btn-success btn-sm">
+                                                        <i class="fas fa-check"></i> Accept
+                                                    </a>
+                                                    <a href="{% url 'decline_request' request.id %}" class="btn btn-danger btn-sm">
+                                                        <i class="fas fa-times"></i> Decline
+                                                    </a>
+                                                {% elif request.status == 'accepted' %}
+                                                    <a href="{% url 'decline_request' request.id %}" class="btn btn-danger btn-sm">
+                                                        <i class="fas fa-times"></i> Decline
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                            <br>
+                                        </li>
+                                    {% empty %}
+                                        <li>No requests for this ride yet.</li>
+                                    {% endfor %}
+                                    </ul>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="no-rides">No Upcoming Rides You Created.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Frame: Ride Taker Side -->
+            <div class="col-md-6">
+                <div class="frame">
+                    <h2 class="frame-title">Ride Taker (Passenger) Side</h2>
+                    <!-- Your Joined Rides section -->
+                    <div class="rides-section">
+                        <h3>Your Joined Rides</h3>
+                        {% if joined_rides %}
+                            <ul class="list-group">
+                            {% for joined in joined_rides %}
+                                <li class="list-group-item ride-item">
+                                    <strong>{{ joined.ride.start_location }} to {{ joined.ride.destination }}</strong> on {{ joined.ride.ride_date }}<br>
+                                    Status: <span class="status">{{ joined.status }}</span><br>
+                                    Ride Giver: <span class="status">{{ joined.ride.ride_giver.user.username }}</span><br>
+                                    <i class="fas fa-phone"></i> Contact Number: {{ joined.ride.ride_giver.mobile_number }}<br>
+                                    {% if joined.status != 'completed' %}
+                                    <a href="{% url 'mark_ride_completed' joined.id %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check-circle"></i> Ride Completed? Click Here
+                                    </a>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="no-rides">No New Joined Rides.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Your Pending Ride Requests as a Ride Taker section -->
+                    <div class="rides-section">
+                        <h3>Your Pending Ride Requests</h3>
+                        {% if user_requested_rides %}
+                            <ul class="list-group">
+                            {% for request in user_requested_rides %}
+                                <li class="list-group-item ride-item">
+                                    <strong>{{ request.start_location }} to {{ request.destination }}</strong> on {{ request.ride.ride_date }}<br>
+                                    Status: <span class="status">{{ request.status }}</span><br>
+                                    Ride Giver: <span class="status">{{ request.ride.ride_giver.user.username }}</span>
+                                    {% if request.status == 'accepted' %}
+                                    <br>
+                                    <i class="fas fa-phone"></i> Contact Number: {{ request.ride.ride_giver.mobile_number }} - (Please call Mr/Mrs. {{ request.ride.ride_giver.user.username }} before joining the ride to schedule the exact pickup time.)
+                                    <br>
+                                    <i class="fas fa-money-bill-wave"></i> Cost: Rs.{{ request.cost }} 
+                                    <a href="{% url 'dummy_payment' request.id %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-sign-in-alt"></i> Join Now
+                                    </a>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="no-rides">No Pending Ride Requests.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Travel Companions Section -->
+        <div class="travel-companions-section">
+            <h2 class="frame-title">Travel Companions</h2>
+            {% if unique_rides %}
+                <ul class="list-group">
+                    {% for ride, details in unique_rides.items %}
+                    <li class="list-group-item ride-item">
+                        From <strong>{{ ride.start_location }}</strong> to <strong>{{ ride.destination }}</strong> on <strong>{{ ride.ride_date }}</strong><br>
+                        <strong>Ride Giver:</strong> {{ details.ride_giver }}<br>
+                        <strong>Travel Companions:</strong>
+                        <ul>
+                            {% for companion in details.companions %}
+                                <li>{{ companion }}</li>
+                            {% empty %}
+                                <li>No Companions have Joined this Ride yet.</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No companions have joined your rides yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

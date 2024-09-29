@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Available Rides</title>
+</head>
+<body>
+    <h2>Available Rides</h2>
+    <p>Pickup: {{ pickup }}</p>
+    <p>Destination: {{ destination }}</p>
+
+    <ul>
+        {% for ride in rides %}
+        <li>
+            <strong>Start:</strong> {{ ride.start_location }}
+            <strong>Destination:</strong> {{ ride.destination }}
+            <a href="{% url 'ride_details' ride.id %}">View Details</a>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

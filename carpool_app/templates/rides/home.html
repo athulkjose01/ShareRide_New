@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareRide - Create Your Ride</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            margin-bottom: 15px;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: #4CAF50 !important;
+        }
+
+        .nav-link {
+            color: #333 !important;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #4CAF50 !important;
+        }
+
+        .form-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-top: 2rem;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 800px;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .btn-custom {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-custom:hover {
+            background-color: #45a049;
+            border-color: #45a049;
+        }
+
+        .login-button {
+            color: black;
+            font-weight: bold;
+            margin-top: 5px;
+            display: block;
+            text-align: center;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnX3vMyrAvLILwOvs7c8P9soMWP7D3TEI&libraries=places,geometry"></script>
+</head>
+<body>
+
+    <div class="header">
+        <h1><i class="fas fa-car-side"></i> ShareRide</h1>
+        <p class="lead">Create Your Ride</p>
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'ridegiver_update' %}"><i class="fas fa-car"></i> Update Car Details</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}"><i class="fas fa-sign-in-alt"></i> ChatBot</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'view_upcoming_rides' %}"><i class="fas fa-user"></i>Upcoming/Ongoing Rides</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'my_account' %}"><i class="fas fa-user"></i> My Account</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-user"></i> LogOut</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container form-container">
+        <h2 class="text-center mb-4">Create a Ride</h2>
+        <form method="post" action="javascript:void(0);" id="ride-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="ride_date">Ride Date</label>
+                    <input type="date" class="form-control" id="ride_date" name="ride_date" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="ride_time">Ride Time</label>
+                    <input type="time" class="form-control" id="ride_time" name="ride_time" required>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-custom btn-block" onclick="calculateRoute()">Get Directions</button>
+            <button type="button" class="btn btn-custom btn-block mt-2" id="confirm-ride-btn" onclick="confirmRide()" style="display:none;">Confirm Ride</button>
+        </form>
+
+        <div id="map" class="mt-4"></div>
+    </div>
+
+    <script>
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let currentRoute;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 45.4215296, lng: -75.6971931 },
+                zoom: 15,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            const startInput = document.getElementById('id_start_location');
+            const startAutocomplete = new google.maps.places.Autocomplete(startInput);
+
+            const destinationInput = document.getElementById('id_destination');
+            const destinationAutocomplete = new google.maps.places.Autocomplete(destinationInput);
+        }
+
+        function calculateRoute() {
+            const start = document.getElementById('id_start_location').value;
+            const destination = document.getElementById('id_destination').value;
+            const rideDate = document.getElementById('ride_date').value;
+            const rideTime = document.getElementById('ride_time').value;
+
+            if (!start || !destination || !rideDate || !rideTime) {
+                alert("Please enter all required fields.");
+                return;
+            }
+
+            directionsService.route(
+                {
+                    origin: start,
+                    destination: destination,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                },
+                (response, status) => {
+                    if (status === "OK") {
+                        directionsRenderer.setDirections(response);
+                        currentRoute = response.routes[0];
+                        document.getElementById('confirm-ride-btn').style.display = 'block';
+                    } else {
+                        console.error('Directions request failed due to ' + status);
+                    }
+                }
+            );
+        }
+
+        function confirmRide() {
+            if (!currentRoute) {
+                alert("Please calculate the route first.");
+                return;
+            }
+
+            const start = document.getElementById('id_start_location').value;
+            const destination = document.getElementById('id_destination').value;
+            const rideDate = document.getElementById('ride_date').value;
+            const rideTime = document.getElementById('ride_time').value;
+            const polyline = google.maps.geometry.encoding.encodePath(currentRoute.overview_path);
+
+            fetch('/save-route/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    start: start,
+                    destination: destination,
+                    ride_date: rideDate,
+                    ride_time: rideTime,
+                    polyline: polyline,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Ride created successfully!');
+                    document.getElementById('confirm-ride-btn').style.display = 'none';
+                } else {
+                    alert('Failed to create ride.');
+                }
+            })
+            .catch(error => {
+                console.error('Error storing route:', error);
+                alert('An error occurred while creating the ride.');
+            });
+        }
+
+        function disablePastDatesAndTimes() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('ride_date').setAttribute('min', today);
+
+            document.getElementById('ride_date').addEventListener('change', function () {
+                const selectedDate = this.value;
+                const now = new Date();
+                const currentTime = now.toISOString().split('T')[1].slice(0, 5);
+                const rideTime = document.getElementById('ride_time');
+
+                if (selectedDate === today) {
+                    rideTime.setAttribute('min', currentTime);
+                } else {
+                    rideTime.removeAttribute('min');
+                }
+            });
+        }
+
+        google.maps.event.addDomListener(window, 'load', function () {
+            initMap();
+            disablePastDatesAndTimes();
+        });
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

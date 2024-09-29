@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ride Giver Details</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ShareRide</h1>
+    </div>
+    <div class="container mt-5">
+        <div class="card shadow-lg p-4">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Ride Giver Details</h2>
+
+                <form method="post" action="{% url 'save_ride_giver' %}">
+                    {% csrf_token %}
+                    <!-- Hidden user field -->
+                    <input type="hidden" id="user" name="user" value="{{ request.user.id }}">
+
+                    <!-- Car selection -->
+                    <div class="form-group">
+                        <label for="car">Select Car:</label>
+                        <select id="car" name="car" class="form-control">
+                            <option value="" disabled selected>Select your car model</option>
+                            <option value="Alto">Alto</option>
+                            <option value="Wagon R">Wagon R</option>
+                            <option value="Swift">Swift</option>
+                            <option value="Dzire">Dzire</option>
+                            <option value="Baleno">Baleno</option>
+                            <option value="Brezza">Brezza</option>
+                            <option value="Grand Vitara">Grand Vitara</option>
+                            <option value="Ciaz">Ciaz</option>
+                            <option value="XL6">XL6</option>
+                            <option value="Eeco">Eeco</option>
+                            <option value="Grand i10 Nios">Grand i10 Nios</option>
+                            <option value="i20">i20</option>
+                            <option value="Creta">Creta</option>
+                            <option value="Venue">Venue</option>
+                            <option value="Verna">Verna</option>
+                            <option value="Alcazar">Alcazar</option>
+                            <option value="Kona Electric">Kona Electric</option>
+                            <option value="Seltos">Seltos</option>
+                            <option value="Carens">Carens</option>
+                            <option value="Sonet">Sonet</option>
+                            <option value="EV6">EV6</option>
+                            <option value="Nexon">Nexon</option>
+                            <option value="Innova">Innova</option>
+                            <option value="Punch">Punch</option>
+                            <option value="Tiago">Tiago</option>
+                            <option value="Harrier">Harrier</option>
+                            <option value="Safari">Safari</option>
+                            <option value="Nexon EV">Nexon EV</option>
+                            <option value="Scorpio">Scorpio</option>
+                            <option value="Thar">Thar</option>
+                            <option value="XUV700">XUV700</option>
+                            <option value="Bolero">Bolero</option>
+                            <option value="XUV300">XUV300</option>
+                            <option value="Fortuner">Fortuner</option>
+                            <option value="Innova Crysta">Innova Crysta</option>
+                            <option value="Camry">Camry</option>
+                            <option value="Corolla Altis">Corolla Altis</option>
+                            <option value="City">City</option>
+                            <option value="Amaze">Amaze</option>
+                            <option value="WR-V">WR-V</option>
+                            <option value="Civic">Civic</option>
+                            <option value="Magnite">Magnite</option>
+                            <option value="Kicks">Kicks</option>
+                            <option value="Kushaq">Kushaq</option>
+                            <option value="Slavia">Slavia</option>
+                            <option value="Octavia">Octavia</option>
+                            <option value="Taigun">Taigun</option>
+                            <option value="Polo">Polo</option>
+                            <option value="C-Class">C-Class</option>
+                            <option value="E-Class">E-Class</option>
+                            <option value="3 Series">3 Series</option>
+                        </select>
+                    </div>
+
+                    <!-- Fuel type selection -->
+                    <div class="form-group">
+                        <label for="fuel_type">Fuel Type:</label>
+                        <select id="fuel_type" name="fuel_type" class="form-control">
+                            <option value="" disabled selected>Select fuel type</option>
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mobile_number">Mobile Number:</label>
+                        <input type="text" id="mobile_number" name="mobile_number" class="form-control" placeholder="Enter your mobile number" required>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="form-group">
+                        <label for="features">Car Features:</label>
+                        <textarea id="features" name="features" class="form-control" rows="4" placeholder="Enter features like AC, Sunroof, etc."></textarea>
+                    </div>
+
+                    <!-- Submit button -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS (Optional if you need JavaScript functionality) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

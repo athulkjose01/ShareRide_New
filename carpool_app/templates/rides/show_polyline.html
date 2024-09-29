@@ -1,0 +1,31 @@
+<!-- show_polyline.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Show Polyline</title>
+</head>
+<body>
+    <h1>Display Polylines</h1>
+    <form action="{% url 'get_coordinates' %}" method="get">
+        <label for="ride">Select a ride:</label>
+        <select id="ride" name="ride">
+            {% for ride in rides %}
+                <option value="{{ ride.id }}">{{ ride.start_location }} to {{ ride.destination }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Show Coordinates</button>
+    </form>
+    <div id="coordinates">
+        {% if coordinates %}
+            <h2>Coordinates:</h2>
+            <ul>
+                {% for coord in coordinates %}
+                    <li>Latitude: {{ coord.lat }}, Longitude: {{ coord.lng }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</body>
+</html>
