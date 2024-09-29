@@ -31,23 +31,18 @@ jobs:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       with:
-        host: "13.60.166.171"
+        host: "16.170.245.188"
         username: "ubuntu"
         key: ${{ secrets.EC2_KEY }}
         script: |
-          # Stop and remove any existing containers using port 8000
           docker stop $(docker ps -q --filter publish=8000) || true
           docker rm $(docker ps -aq --filter publish=8000) || true
           
-          # Pull the new image
           docker pull athulkjose01/shareride:${{ github.sha }}
           
-          # Stop and remove the specific shareride container if it exists
           docker stop shareride || true
           docker rm shareride || true
           
-          # Run the new container
           docker run -d --name shareride -p 8000:8000 athulkjose01/shareride:${{ github.sha }}
           
-          # Clean up old images to free up space
           docker image prune -af
