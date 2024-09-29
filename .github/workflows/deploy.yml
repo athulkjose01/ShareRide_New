@@ -26,7 +26,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: athulkjose01/shareride:tag
+        tags: athulkjose01/shareride:${{ github.sha }}
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
@@ -35,12 +35,24 @@ jobs:
         username: "ubuntu"
         key: ${{ secrets.EC2_KEY }}
         script: |
-          docker stop $(docker ps -q --filter publish=8000) || true
+          # Stop and remove containers using port 8000
+          containers=$(docker ps -q --filter publish=8000)
+          if [ ! -z "$containers" ]; then
+            docker stop $containers
+            docker rm $containers
+          fi
           
-          docker pull athulkjose01/shareride:tag}
+          # Pull the new image
+          docker pull athulkjose01/shareride:${{ github.sha }}
           
-          docker stop shareride || true
-          docker rm shareride || true
+          # Stop and remove the shareride container if it exists
+          if docker ps -a --format '{{.Names}}' | grep -q '^shareride$'; then
+            docker stop shareride
+            docker rm shareride
+          fi
 
-          docker run -p 8000:8000 athulkjose01/shareride:tag
+          # Run the new container
+          docker run -d --name shareride -p 8000:8000 athulkjose01/shareride:${{ github.sha }}
           
+          # Clean up unused Docker resources
+          docker system prune -af
