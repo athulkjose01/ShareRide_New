@@ -26,7 +26,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: athulkjose01/shareride:${{ github.sha }}
+        tags: athulkjose01/shareride:tag
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
@@ -36,13 +36,11 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           docker stop $(docker ps -q --filter publish=8000) || true
-          docker rm $(docker ps -aq --filter publish=8000) || true
           
-          docker pull athulkjose01/shareride:${{ github.sha }}
+          docker pull athulkjose01/shareride:tag}
           
           docker stop shareride || true
           docker rm shareride || true
+
+          docker run -p 8000:8000 athulkjose01/shareride:tag
           
-          docker run -d --name shareride -p 8000:8000 athulkjose01/shareride:${{ github.sha }}
-          
-          docker image prune -af
