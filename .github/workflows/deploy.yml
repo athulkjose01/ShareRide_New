@@ -26,16 +26,16 @@ jobs:
       with:
         context: .
         push: true
-        tags: athulkjose01/shareride:${{ github.sha }}
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       with:
-        host: "13.60.166.171"        # Replace with your EC2 instance public IP
-        username: "ubuntu"           # Use 'ubuntu' as the username
+        host: "13.60.166.171"  
+        username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          docker pull athulkjose01/shareride:${{ github.sha }}
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
           docker stop shareride || true
           docker rm shareride || true
-          docker run -d --name shareride -p 8000:8000 athulkjose01/shareride:${{ github.sha }}
+          docker run -d --name shareride -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/shareride:${{ github.sha }}
