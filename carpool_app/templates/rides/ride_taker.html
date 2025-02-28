@@ -50,85 +50,157 @@
             color: #4CAF50 !important;
         }
 
-        .btn-custom {
-            background-color: #4CAF50;
-            border-color: #4CAF50;
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .btn-custom:hover {
-            background-color: #45a049;
-            border-color: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        /* New styles below */
+        .main-content {
+            padding: 3rem 0;
         }
 
         .form-container {
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+            padding: 2.5rem;
+            margin-bottom: 3rem;
             position: relative;
             overflow: hidden;
+            border-top: 5px solid #4CAF50;
         }
 
-        .form-container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        .form-container h2 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            position: relative;
+            display: inline-block;
         }
 
-        .gradient-animation {
+        .form-container h2:after {
+            content: '';
             position: absolute;
-            top: 0;
+            width: 50%;
+            height: 3px;
+            background: #4CAF50;
+            bottom: -10px;
             left: 0;
-            right: 0;
-            height: 10px;
-            background: linear-gradient(
-                45deg,
-                #ff9a9e,
-                #fad0c4,
-                #ffecd2,
-                #fcb69f,
-                #fdcbf1,
-                #e6e9f0
-            );
-            background-size: 300% 300%;
-            animation: gradientShift 15s ease infinite;
         }
 
-        @keyframes gradientShift {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        #map {
-            height: 400px;
-            width: 100%;
-            border-radius: 15px;
-            margin-top: 1rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        .form-label {
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 0.5rem;
         }
 
         .form-control {
             border-radius: 10px;
-            border: 1px solid #ced4da;
+            border: 1px solid #e0e0e0;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
+            background-color: #f9f9f9;
         }
 
         .form-control:focus {
             border-color: #4CAF50;
-            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.15);
+            background-color: #fff;
+        }
+
+        .btn-custom {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-custom:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: all 0.5s;
+            z-index: -1;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-custom:hover:before {
+            left: 100%;
+        }
+
+        #map {
+            height: 450px;
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 5px solid white;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        #map:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .map-container {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .map-container::before {
+            content: '';
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 450px;
+            background-color: rgba(76, 175, 80, 0.1);
+            border-radius: 20px;
+            z-index: -1;
+        }
+
+        .feature-box {
+            background-color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-bottom: 3px solid transparent;
+        }
+
+        .feature-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #4CAF50;
+            background-color: rgba(76, 175, 80, 0.1);
+            width: 80px;
+            height: 80px;
+            line-height: 80px;
+            border-radius: 50%;
+            display: inline-block;
         }
 
         .animated-bg {
@@ -146,21 +218,101 @@
             display: block;
             width: 20px;
             height: 20px;
-            background: rgba(76, 175, 80, 0.2);
+            background: rgba(76, 175, 80, 0.1);
             animation: move 25s infinite linear;
+            border-radius: 50%;
         }
 
         @keyframes move {
             0% {
                 transform: translateY(0) rotate(0deg);
                 opacity: 1;
-                border-radius: 0;
+                border-radius: 50%;
             }
             100% {
                 transform: translateY(-1000px) rotate(720deg);
                 opacity: 0;
                 border-radius: 50%;
             }
+        }
+
+        .date-time-inputs {
+            background-color: #f9f9f9;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4CAF50;
+        }
+
+        .input-with-icon input {
+            padding-left: 40px;
+        }
+
+        #sosButton {
+            background-color: #dc3545;
+            border-radius: 20px;
+            padding: 8px 20px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        #sosButton:hover {
+            background-color: #c82333;
+            transform: scale(1.05);
+        }
+
+        #sosButton:focus {
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,.5);
+        }
+
+        #find-matching-rides-btn {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+        }
+
+        #find-matching-rides-btn:hover {
+            background: linear-gradient(135deg, #ff9a9e 20%, #fad0c4 100%);
+            box-shadow: 0 7px 20px rgba(255, 154, 158, 0.4);
+        }
+
+        /* Style for form fields (start and end locations) */
+        .form-container p {
+            margin-bottom: 1rem; /* Spacing between form fields */
+        }
+
+        .form-container p label {
+            display: block;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-container p input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-container p input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.15);
         }
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnX3vMyrAvLILwOvs7c8P9soMWP7D3TEI&libraries=places,geometry"></script>
@@ -199,14 +351,28 @@
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'view_upcoming_rides' %}"><i class="fas fa-calendar-alt"></i> Upcoming/Ongoing Rides</a>
+                        <a class="nav-link" href="{% url 'view_upcoming_rides' %}">
+                            <i class="fas fa-calendar-alt"></i> Upcoming/Ongoing Rides
+                            {% if notification_count > 0 %}
+                                <span class="badge badge-danger">{{ notification_count }}</span>
+                            {% endif %}
+                        </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'message_list' %}"><i class="fas fa-envelope"></i> Messages</a>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'my_account' %}"><i class="fas fa-user"></i> My Account</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> LogOut</a>
                     </li>
+                    {% if sos_visible %}
+                    <li class="nav-item">
+                        <button id="sosButton" class="nav-link btn btn-danger text-white" onclick="sendSosAlert()">
+                            <i class="fas fa-exclamation-triangle"></i> SOS
+                        </button>
+                    </li>
+                    {% endif %}
                     {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Login</a>
@@ -217,72 +383,174 @@
         </div>
     </nav>
 
-    <div class="container">
-        <div class="form-container">
-            <div class="gradient-animation"></div>
-            <h2 class="text-center mb-4">Find a Ride</h2>
-            <form id="ride-form">
-                {% csrf_token %}
-                {{ form.as_p }}
+    <section class="main-content">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="form-container">
+                        <h2 class="text-center mb-4">Find Your Perfect Ride / <a href="{% url 'give_rides' %}">Offer a Ride</a></h2>
+                        <form id="ride-form">
+                            {% csrf_token %}
+                            {{ form.as_p }}
 
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="ride_date">Ride Date</label>
-                        <input type="date" class="form-control" id="ride_date" required>
+                
+                            <div class="date-time-inputs">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="ride_date"><i class="far fa-calendar-alt mr-2"></i>Ride Date</label>
+                                            <input type="date" class="form-control" id="ride_date" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="ride_time"><i class="far fa-clock mr-2"></i>Ride Time</label>
+                                            <input type="time" class="form-control" id="ride_time" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <button type="button" class="btn btn-custom btn-block" onclick="calculateRoute()">
+                                <i class="fas fa-route mr-2"></i>Get Directions
+                            </button>
+                            <button type="button" class="btn btn-block mt-3" id="find-matching-rides-btn" onclick="findMatchingRides()" style="display:none;">
+                                <i class="fas fa-search mr-2"></i>Find Matching Rides
+                            </button>
+                        </form>
                     </div>
-                    <div class="form-group col-md-6">
-                        <label for="ride_time">Ride Time</label>
-                        <input type="time" class="form-control" id="ride_time" required>
+                
+                    <div class="map-container">
+                        <div id="map"></div>
                     </div>
                 </div>
+            </div>
 
-                <button type="button" class="btn btn-custom btn-block" onclick="calculateRoute()">Get Directions</button>
-                <button type="button" class="btn btn-custom btn-block mt-2" id="find-matching-rides-btn" onclick="findMatchingRides()" style="display:none;">Find Matching Rides</button>
-            </form>
-
-            <div id="map" class="mt-4"></div>
+            <div class="row mt-5">
+                <div class="col-md-4">
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h4>Safe Travel</h4>
+                        <p>Travel with verified drivers and passengers for a secure journey.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <h4>Save Money</h4>
+                        <p>Share the cost of your journey and save on transportation expenses.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <h4>Eco-Friendly</h4>
+                        <p>Reduce your carbon footprint by sharing rides with others.</p>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-
+    </section>
+    
     <script>
         let map;
         let directionsService;
         let directionsRenderer;
         let currentRoute;
-
+    
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 45.4215296, lng: -75.6971931 },
                 zoom: 15,
                 mapTypeId: google.maps.MapTypeId.ROADMAP,
+                styles: [
+                    {
+                        "featureType": "administrative",
+                        "elementType": "labels.text.fill",
+                        "stylers": [{"color": "#444444"}]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "all",
+                        "stylers": [{"color": "#f2f2f2"}]
+                    },
+                    {
+                        "featureType": "poi",
+                        "elementType": "all",
+                        "stylers": [{"visibility": "off"}]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "all",
+                        "stylers": [{"saturation": -100}, {"lightness": 45}]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "all",
+                        "stylers": [{"visibility": "simplified"}]
+                    },
+                    {
+                        "featureType": "road.arterial",
+                        "elementType": "labels.icon",
+                        "stylers": [{"visibility": "off"}]
+                    },
+                    {
+                        "featureType": "transit",
+                        "elementType": "all",
+                        "stylers": [{"visibility": "off"}]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "all",
+                        "stylers": [{"color": "#c3cfe2"}, {"visibility": "on"}]
+                    }
+                ]
             });
-
+    
             directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                polylineOptions: {
+                    strokeColor: "#4CAF50",
+                    strokeWeight: 5,
+                    strokeOpacity: 0.8
+                }
+            });
             directionsRenderer.setMap(map);
-
+    
             const startInput = document.getElementById('id_start_location');
             const startAutocomplete = new google.maps.places.Autocomplete(startInput);
-
+    
             const destinationInput = document.getElementById('id_destination');
             const destinationAutocomplete = new google.maps.places.Autocomplete(destinationInput);
-
+    
             // Disable past dates in the date input field
             const today = new Date().toISOString().split('T')[0];
             document.getElementById("ride_date").setAttribute("min", today);
         }
-
+    
         function calculateRoute() {
             const start = document.getElementById('id_start_location').value;
             const destination = document.getElementById('id_destination').value;
             const rideDate = document.getElementById('ride_date').value;
             const rideTime = document.getElementById('ride_time').value;
-
+    
             if (!start || !destination || !rideDate || !rideTime) {
                 alert("Please enter all required fields.");
                 return;
             }
-
+    
+            // Check if the ride time is in the past
+           if (isRideTimePast(rideDate, rideTime)) {
+                alert("Please select a future ride time.");
+                return; // Prevent further execution
+            }
+    
             directionsService.route(
                 {
                     origin: start,
@@ -300,26 +568,27 @@
                 }
             );
         }
-
-        function findMatchingRides() {
+    
+       function findMatchingRides() {
             if (!currentRoute) {
                 alert("Please calculate the route first.");
                 return;
             }
-
+    
             const start = document.getElementById('id_start_location').value;
             const destination = document.getElementById('id_destination').value;
             const rideDate = document.getElementById('ride_date').value;
             const rideTime = document.getElementById('ride_time').value;
             const polyline = google.maps.geometry.encoding.encodePath(currentRoute.overview_path);
-
-            fetch('/match-rides/', {
+    
+    
+              fetch('/match-rides/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}',
                 },
-                body: JSON.stringify({
+                 body: JSON.stringify({
                     start: start,
                     destination: destination,
                     date: rideDate,
@@ -327,64 +596,142 @@
                     polyline: polyline,
                 }),
             })
-            .then(response => response.text())
-            .then(data => {
-                document.open();
-                document.write(data);
-                document.close();
+              .then(response => response.text()) // Expecting HTML
+               .then(data => {
+                 document.open();
+                 document.write(data);
+                 document.close();
             })
-            .catch(error => {
-                console.error('Error finding matching rides:', error);
-            });
+                .catch(error => {
+                    console.error('Error finding matching rides:', error);
+                });
+
+              fetch('/ride_request/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                     body: JSON.stringify({
+                        start: start,
+                        destination: destination,
+                        date: rideDate,
+                        time: rideTime,
+                        polyline: polyline,
+                    }),
+                })
+
         }
 
+              
+    
+    
         // Function to check if the selected ride time is in the past
         function isRideTimePast(selectedDate, selectedTime) {
             const now = new Date();
             const selectedDateTime = new Date(selectedDate + ' ' + selectedTime);
-            return selectedDateTime < now;
+            const today = new Date().toISOString().split('T')[0];
+    
+            // Check if the selected date is today
+            if (selectedDate === today) {
+                return selectedDateTime < now;
+            }
+            return false;
         }
-
+    
         // Function to handle form submission
         function handleRideFormSubmit() {
             const rideDate = document.getElementById('ride_date').value;
             const rideTime = document.getElementById('ride_time').value;
-
+    
             // Check if the ride time is in the past
             if (isRideTimePast(rideDate, rideTime)) {
                 alert("Please select a future ride time.");
-                return; // Prevent submission
+                return false; // Prevent submission
             }
-
-            // If the time is valid, submit the form
-            // (You would need to implement your form submission logic here)
-            // Example:
-            // document.getElementById('ride-form').submit();
+            return true;
         }
-
+    
+    
         // Attach the validation logic to the form submission
-        document.getElementById('ride-form').addEventListener('submit', handleRideFormSubmit);
-
+        document.getElementById('ride-form').addEventListener('submit', function(event){
+          if(!handleRideFormSubmit()){
+            event.preventDefault();
+          }
+        });
+    
         google.maps.event.addDomListener(window, 'load', function () {
             initMap();
         });
-
+    
         function createAnimatedBackground() {
             const animatedBg = document.querySelector('.animated-bg');
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 15; i++) {
                 const span = document.createElement('span');
                 span.style.top = Math.random() * 100 + '%';
                 span.style.left = Math.random() * 100 + '%';
+                span.style.width = Math.random() * 30 + 10 + 'px';
+                span.style.height = Math.random() * 30 + 10 + 'px';
                 span.style.animationDelay = Math.random() * 5 + 's';
+                span.style.animationDuration = Math.random() * 20 + 10 + 's';
                 animatedBg.appendChild(span);
             }
         }
-
+    
         // Call the function when the page loads
         window.addEventListener('load', createAnimatedBackground);
-
+    
+        function sendSosAlert() {
+            if (confirm('Are you sure you want to send an emergency alert?')) {
+                fetch('/sos-alert/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Emergency alert has been sent successfully. Help is on the way.');
+                    } else {
+                        alert('Error sending emergency alert: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending emergency alert. Please try again.');
+                });
+            }
+        }
+    
+            function checkSosStatus() {
+                fetch('/check-sos-status/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const sosButton = document.getElementById('sosButton');
+                    if (data.sos_visible) {
+                        sosButton.style.display = 'block';
+                    } else {
+                        sosButton.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking SOS status:', error);
+                });
+            }
+            
+            // Call the function periodically (every 30 seconds)
+            setInterval(checkSosStatus, 30000);
+    
     </script>
-
+    
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

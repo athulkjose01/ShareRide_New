@@ -1,9 +1,22 @@
+import datetime
+from django.utils import timezone
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import os
 import re
+from django.db import models
+from django.core import serializers
 from django.views import View
 import googlemaps
+from django.db.models import F
+from .forms import RideForm, RideGiverForm, RideCreateForm
+from django.views.decorators.http import require_POST
+import polyline as polyline_decode
+from geopy.distance import geodesic
+from googlemaps.convert import decode_polyline
+from math import radians, sin, cos, sqrt, atan2
+from django.contrib import messages
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum
 from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_POST
@@ -29,8 +42,7 @@ from .forms import PasswordResetForm
 from .forms import CustomSetPasswordForm
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
-from .forms import RideForm
-from .models import JoinedRide, Ride, RideRequest, UserProfile
+from .models import JoinedRide, Rating, Ride, RideRequest, RideRequestTemporary, UserProfile, UserReport, Message
 import json
 from datetime import datetime
 from django.utils.timezone import now
@@ -55,8 +67,21 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 import pickle
 import numpy as np
+import requests
 from django.http import JsonResponse
 from django.shortcuts import render
+from .models import UserProfile
+from twilio.rest import Client
+from django.utils.timezone import now
+from django.utils import timezone
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from .models import Message
+from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
 
 
 
@@ -77,7 +102,7 @@ class LoginView(View):
             if not hasattr(user, 'userprofile'):
                 UserProfile.objects.create(user=user)
             
-            if user.is_superuser and user.username == 'admin':
+            if user.is_superuser and user.username == 'shareride':
                 # Log in the superuser
                 login(request, user)
                 # Redirect to the Admin Dashboard with a next parameter
@@ -88,6 +113,8 @@ class LoginView(View):
         else:
             error_message = "Incorrect username or password!"
             return render(request, self.template_name, {'error_message': error_message})
+        
+
 
 
 def register(request):
@@ -116,18 +143,21 @@ def register(request):
             error_message = "Password must contain at least one uppercase letter, one lowercase letter, and one special character."
             return render(request, 'rides/register.html', {'error_message': error_message})
 
-        # Check if username or email already exists
+        # Check if username already exists
         if User.objects.filter(username=username).exists():
             error_message = "This username is already taken. Please choose a different one."
             return render(request, 'rides/register.html', {'error_message': error_message})
-        
-         # Check if the mobile number is already taken
-        if UserProfile.objects.filter(mobile_number=mobile_number).exists():
-            error_message = "This mobile number is already associated with another account."
+
+        # Check if mobile number is banned or already exists
+        if UserProfile.objects.filter(mobile_number=mobile_number).exists() or \
+           UserProfile.objects.filter(banned_mobile=mobile_number).exists():
+            error_message = "This mobile number cannot be used. Please use a different one."
             return render(request, 'rides/register.html', {'error_message': error_message})
 
-        if User.objects.filter(email=email).exists():
-            error_message = "This email is already taken. Please use a different one."
+        # Check if email is banned or already exists
+        if User.objects.filter(email=email).exists() or \
+           UserProfile.objects.filter(banned_email=email).exists():
+            error_message = "This email cannot be used. Please use a different one."
             return render(request, 'rides/register.html', {'error_message': error_message})
 
         # Email format check using regular expressions
@@ -135,20 +165,24 @@ def register(request):
             error_message = "Invalid email format. Please enter a valid email address."
             return render(request, 'rides/register.html', {'error_message': error_message})
 
-        # Create the user and save it
-        myuser = User.objects.create_user(username=username, email=email, password=password)
-        myuser.first_name = name
-        myuser.save()
+        try:
+            # Create the user and save it
+            myuser = User.objects.create_user(username=username, email=email, password=password)
+            myuser.first_name = name
+            myuser.save()
 
-        # Update the UserProfile mobile_number (profile is already created via the signal)
-        user_profile = UserProfile.objects.get(user=myuser)
-        user_profile.mobile_number = mobile_number
-        user_profile.save()
+            # Update the UserProfile mobile_number (profile is already created via the signal)
+            user_profile = UserProfile.objects.get(user=myuser)
+            user_profile.mobile_number = mobile_number
+            user_profile.save()
 
-        return redirect('login')
+            return redirect('login')
+
+        except Exception as e:
+            error_message = "An error occurred during registration. Please try again."
+            return render(request, 'rides/register.html', {'error_message': error_message})
 
     return render(request, 'rides/register.html')
-
 
 
 class LogoutView(LogoutView):
@@ -160,7 +194,110 @@ class LogoutView(LogoutView):
 
 def home(request):
     form = RideForm()
-    return render(request, 'rides/ride_taker.html', {'form': form})
+    sos_visible = False
+    notification_count = 0  # Initialize notification count
+
+    # Get today's date and tomorrow's date
+    today = datetime.now().date()
+    tomorrow = today + timedelta(days=-1)  # Corrected line
+
+    if request.user.is_authenticated:
+        # For ride takers, check if there is a ride request with 'joined' status
+        ride_request_exists = RideRequest.objects.filter(
+            user=request.user,
+            status='joined',
+            ride_date__in=[today, tomorrow]
+        ).exists()
+
+        # Check if the user is a RideGiver
+        try:
+            ride_giver = RideGiver.objects.get(user=request.user)
+            ride_requests = RideRequest.objects.filter(ride__ride_giver=ride_giver, ride_date__in=[today, tomorrow])
+
+            # Check if any user has 'joined' status in their ride request
+            ride_request_exists_for_giver = ride_requests.filter(status='joined').exists()
+
+            # If any ride request has 'joined' status, show SOS
+            sos_visible = ride_request_exists_for_giver
+
+            # Calculate notification count for ride giver
+            # Count pending ride requests for rides given by this user
+            notification_count += RideRequest.objects.filter(
+                ride__ride_giver=ride_giver,
+                status='requested', #checking for any pendin reques
+                ride__ride_date__gte=today
+            ).count()
+
+
+
+        except RideGiver.DoesNotExist:
+            ride_request_exists_for_giver = False
+
+        # Combine conditions: show SOS if any ride request for the user or ride giver has 'joined' status
+        sos_visible = sos_visible or ride_request_exists
+
+        # Calculate notification count for ride taker
+        # Count accepted ride requests that the user has made
+        notification_count += RideRequest.objects.filter(
+            user=request.user,
+            status='accepted', # checkign for any accept request to show in the navbar
+            ride__ride_date__gte=today
+        ).count()
+        # also check for the requested ride to show count in the navbar, it means ride giver requested his ride,
+        notification_count += RideRequest.objects.filter(
+            user=request.user,
+            status='requested',  # Assuming 'requested' is the status for pending requests
+            ride__ride_date__gte=today
+        ).count()
+
+    return render(request, 'rides/ride_taker.html', {'form': form, 'sos_visible': sos_visible, 'notification_count': notification_count})
+
+
+
+def ride_request(request):  # Renamed for clarity
+    if request.method == 'POST' and request.user.is_authenticated:
+        try:
+            data = request.body.decode('utf-8')
+            json_data = json.loads(data)
+
+            start_location = json_data.get('start')
+            destination = json_data.get('destination')
+            ride_date_str = json_data.get('date')  # Date is coming as a string
+            ride_time_str = json_data.get('time')   # Time is coming as a string
+            polyline = json_data.get('polyline')
+
+            # Convert date and time strings to Python objects
+            ride_date = datetime.strptime(ride_date_str, '%Y-%m-%d').date()
+            ride_time = datetime.strptime(ride_time_str, '%H:%M').time()
+
+            # You might want to calculate distance here using the polyline,
+            # Google Maps API, or other methods.  Leaving it as None for now.
+            distance = None
+
+            # Create the RideRequestTemporary object
+            ride_request_temp = RideRequestTemporary(
+                user=request.user,
+                ride_date=ride_date,
+                ride_time=ride_time,
+                start_location=start_location,
+                destination=destination,
+                polyline=polyline,
+                distance=distance
+            )
+            ride_request_temp.save()
+
+            # You can render a template or return a JSON response.  This is just an example.
+            return render(request, 'rides/match_rides_results.html', {'message': 'Ride request saved!'})
+
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)  # Return error message
+
+    else:
+        return HttpResponse("Invalid request.", status=400)
+
+import json
+
 
 
 
@@ -173,14 +310,13 @@ def save_route(request):
         polyline = data.get('polyline')
         date = data.get('ride_date')
         time = data.get('ride_time')
+        seats_offered = data.get('seats_offered', 4)  # Get seats_offered from request
 
-        # Get the RideGiver for the currently logged-in user
         try:
             ride_giver = RideGiver.objects.get(user=request.user)
         except RideGiver.DoesNotExist:
             return JsonResponse({'status': 'fail', 'message': 'RideGiver not found for the current user'})
 
-        # Create a new Ride object
         Ride.objects.create(
             ride_giver=ride_giver,
             start_location=start,
@@ -188,12 +324,19 @@ def save_route(request):
             polyline=polyline,
             ride_date=date,
             ride_time=time,
-            car_model=ride_giver.car,  # Set car_model from RideGiver's car
+            car_model=ride_giver.car,
+            seats_offered=seats_offered  # Add seats_offered
         )
 
-        return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'success', 'redirect_url': '/ride-created/'})
 
     return JsonResponse({'status': 'fail'})
+
+
+
+
+def ride_created(request):
+    return render(request, 'rides/ride_created.html')
 
 
 
@@ -232,7 +375,7 @@ class GiveRidesView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         try:
             ride_giver = RideGiver.objects.get(user=request.user)
-            form = RideForm()
+            form = RideCreateForm()
             return render(request, 'rides/home.html', {'form': form})
         except RideGiver.DoesNotExist:
             message = "Please add your car details first."
@@ -270,99 +413,246 @@ def show_request_polyline(request):
 
 
 
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great-circle distance between two points on the Earth.
+    """
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    return 6371 * c
+
+def compute_polyline_distance(points):
+    """
+    Calculate the total distance of a polyline.
+    """
+    total_distance = 0
+    for i in range(len(points) - 1):
+        total_distance += haversine(points[i][0], points[i][1], points[i+1][0], points[i+1][1])
+    return total_distance
+
+def decode_polyline(polyline):
+    """
+    Decode a polyline string into a list of latitude/longitude points.
+    """
+    points = []
+    index = 0
+    lat = 0
+    lng = 0
+    while index < len(polyline):
+        b = 0
+        shift = 0
+        result = 0
+        while True:
+            b = ord(polyline[index]) - 63
+            index += 1
+            result |= (b & 0x1F) << shift
+            shift += 5
+            if b < 0x20:
+                break
+        dlat = ~(result >> 1) if result & 1 else result >> 1
+        lat += dlat
+        shift = 0
+        result = 0
+        while True:
+            b = ord(polyline[index]) - 63
+            index += 1
+            result |= (b & 0x1F) << shift
+            shift += 5
+            if b < 0x20:
+                break
+        dlng = ~(result >> 1) if result & 1 else result >> 1
+        lng += dlng
+        points.append({'lat': lat * 1e-5, 'lng': lng * 1e-5})
+    return points
+
+def get_place_name(lat, lng):
+    """
+    Get the real place name from latitude and longitude using Google Maps Geocoding API.
+    Removes Plus Codes from the address.
+    """
+    api_key = settings.GOOGLE_MAPS_API_KEY
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={api_key}"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data['results']:
+                full_address = data['results'][0]['formatted_address']
+                parts = full_address.split(',', 1)
+                if len(parts) > 1:
+                  return parts[1].strip()
+                else:
+                  return full_address.strip()
+        return f"{lat:.5f}, {lng:.5f}"
+    except Exception:
+      return f"{lat:.5f}, {lng:.5f}"
+
+
 def match_rides(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        start = data['start']
-        destination = data['destination']
-        polyline = data['polyline']
-        date = data['date']
-        time = data['time']
+    data = json.loads(request.body)
+    start = data['start']
+    destination = data['destination']
+    polyline = data['polyline']
+    date = data['date']
+    time = data['time']
 
-        # Decode and round the polyline coordinates
-        gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
-        decoded_polyline = googlemaps.convert.decode_polyline(polyline)
-        rounded_polyline = [(round(point['lat'], 1), round(point['lng'], 2)) for point in decoded_polyline]
+    decoded_taker_polyline = decode_polyline(polyline)
+    taker_points = [(point['lat'], point['lng']) for point in decoded_taker_polyline]
+    taker_total_distance = compute_polyline_distance(taker_points)
+    taker_start = taker_points[0]
+    taker_end = taker_points[-1]
 
-        # Get the start and end locations from the polyline
-        start_location = rounded_polyline[0]
-        end_location = rounded_polyline[-1]
+    # Convert ride taker's requested time to datetime
+    taker_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+    
+    # Initialize Google Maps client
+    gmaps = googlemaps.Client(key='AIzaSyBnX3vMyrAvLILwOvs7c8P9soMWP7D3TEI')
+    
+    matched_rides = []
+    today = datetime.now().date()
+    now_time = datetime.now().time()
 
-        # Calculate distance using Google Maps API
-        directions_result = gmaps.directions(start_location, destination, mode="driving")
+    ride_queryset = Ride.objects.filter(
+        ride_date=date
+    ).annotate(
+        joined_count=Count('joinedride'),
+        num_passengers=Count('joinedride')
+    ).filter(num_passengers__lt=models.F('seats_offered'))
 
-        if directions_result:
-            distance = directions_result[0]['legs'][0]['distance']['value'] / 1000  # Convert meters to kilometers
-        else:
-            distance = 0  # Default to 0 if unable to calculate
+    if date == str(today):
+        ride_queryset = ride_queryset.filter(Q(ride_time__gte=now_time))
 
-        today = datetime.now().date()
-        now_time = datetime.now().time()
+    for ride in ride_queryset:
+        ride_decoded_polyline = decode_polyline(ride.polyline)
+        giver_points = [(point['lat'], point['lng']) for point in ride_decoded_polyline]
 
-        # Initialize matched_rides list
-        matched_rides = []
+        pickup_distances = [haversine(taker_start[0], taker_start[1], p[0], p[1]) for p in giver_points]
+        pickup_index = pickup_distances.index(min(pickup_distances))
+        
+        dropoff_distances = [haversine(taker_end[0], taker_end[1], p[0], p[1]) for p in giver_points]
+        dropoff_index = dropoff_distances.index(min(dropoff_distances))
+    
+        if pickup_index > dropoff_index:
+            continue
 
-        # Apply conditional filtering based on the date
-        ride_queryset = Ride.objects.filter(
-            ride_date=date  # Match the ride date
-        ).annotate(
-            joined_count=Count('joinedride')  # Annotate rides with the number of joined rides
-        ).filter(
-            joined_count__lt=5  # Only include rides with less than 5 joined rides
-        )
+        # Calculate travel time from ride giver's start to rider's pickup point
+        ride_start_location = f"{giver_points[0][0]},{giver_points[0][1]}"
+        pickup_location = f"{taker_start[0]},{taker_start[1]}"
+        
+        try:
+            directions_result = gmaps.directions(
+                ride_start_location,
+                pickup_location,
+                mode="driving",
+                departure_time=datetime.combine(datetime.strptime(date, '%Y-%m-%d').date(), 
+                                             datetime.strptime(str(ride.ride_time), '%H:%M:%S').time())
+            )
+            
+            if directions_result:
+                # Get duration in seconds and convert to minutes
+                duration_to_pickup = directions_result[0]['legs'][0]['duration']['value'] / 60
+                
+                # Calculate estimated pickup time
+                ride_start_datetime = datetime.combine(datetime.strptime(date, '%Y-%m-%d').date(), 
+                                                     ride.ride_time)
+                estimated_pickup_time = ride_start_datetime + timedelta(minutes=duration_to_pickup)
+                
+                # Check if pickup time is within 2 hours before or after requested time
+                time_difference = abs((estimated_pickup_time - taker_datetime).total_seconds() / 3600)
+                
+                if time_difference > 1:
+                    continue
+                
+            else:
+                continue
+                
+        except Exception as e:
+            print(f"Error calculating directions: {e}")
+            continue
 
-        # If the date is today, filter by time
-        if date == str(today):
-            ride_queryset = ride_queryset.filter(Q(ride_time__gte=now_time) & Q(ride_time__gte=time))
-        else:
-            ride_queryset = ride_queryset.filter(ride_time__gte=time)
+        giver_segment = giver_points[pickup_index:dropoff_index+1]
+        overlapping_distance = compute_polyline_distance(giver_segment)
+        match_percent = min((overlapping_distance / taker_total_distance) * 100, 100)
+        is_100_percent = match_percent >= 96.5
 
-        # Iterate over matched rides and apply polyline matching
-        for ride in ride_queryset:
-            ride_decoded_polyline = googlemaps.convert.decode_polyline(ride.polyline)
-            ride_rounded_polyline = [(round(point['lat'], 1), round(point['lng'], 2)) for point in ride_decoded_polyline]
+        if not is_100_percent:
+            taker_rounded = set((round(p[0], 5), round(p[1], 5)) for p in taker_points)
+            common_indices = []
+            for idx, p in enumerate(giver_points):
+                if (round(p[0], 5), round(p[1], 5)) in taker_rounded:
+                    common_indices.append(idx)
+            
+            if common_indices:
+                new_pickup_index = common_indices[0]
+                new_dropoff_index = common_indices[-1]
+                
+                if new_pickup_index > new_dropoff_index:
+                    new_pickup_index, new_dropoff_index = new_dropoff_index, new_pickup_index
+                
+                new_giver_segment = giver_points[new_pickup_index:new_dropoff_index+1]
+                new_overlapping = compute_polyline_distance(new_giver_segment)
+                new_match_percent = (new_overlapping / taker_total_distance) * 100
+                
+                if new_match_percent >= 60:
+                    pickup_index = new_pickup_index
+                    dropoff_index = new_dropoff_index
+                    overlapping_distance = new_overlapping
+                    match_percent = new_match_percent
 
-            # Check if both start and end points are in the ride giver's polyline and in the correct order
-            start_index = -1
-            end_index = -1
-            for i, point in enumerate(ride_rounded_polyline):
-                if point == start_location:
-                    start_index = i
-                if point == end_location:
-                    end_index = i
-                if point == end_location and start_index != -1 and end_index != -1:
-                    break
+        pickup_point = giver_points[pickup_index]
+        dropoff_point = giver_points[dropoff_index]
+        
+        pickup_name = get_place_name(pickup_point[0], pickup_point[1])
+        dropoff_name = get_place_name(dropoff_point[0], dropoff_point[1])
 
-            if start_index != -1 and end_index != -1 and start_index < end_index:
-                # Situation 1: Ride taker needs to travel more from the drop-off location
-                last_common_point = ride_rounded_polyline[end_index]
-                ride_taker_travel_more = end_location != last_common_point
+        distance_to_pickup = haversine(taker_start[0], taker_start[1], pickup_point[0], pickup_point[1])
+        distance_from_dropoff = haversine(dropoff_point[0], dropoff_point[1], taker_end[0], taker_end[1])
 
-                # Situation 2: Ride giver needs to travel more from the drop-off location
-                ride_giver_travel_more = ride.destination != last_common_point
-
-                # Add matched ride to the list
-                matched_rides.append({
-                    'ride_giver_start': ride.start_location,
-                    'ride_taker_start': start,
-                    'ride_taker_destination': destination,
-                    'ride_giver_destination': ride.destination,
-                    'last_common_point': last_common_point,
-                    'ride_taker_travel_more': ride_taker_travel_more,
-                    'ride_giver_travel_more': ride_giver_travel_more,
-                    'ride': ride, 
-                    'date': date,
-                    'time': time,
-                    'distance': distance,
+        if match_percent >= 60:
+            travel_companions = JoinedRide.objects.filter(ride=ride).select_related('request__user__userprofile')
+            companions_data = []
+            for companion in travel_companions:
+                companions_data.append({
+                    'user_id': companion.request.user.id if companion.request and companion.request.user else None,
+                    'username': companion.request.user.username if companion.request and companion.request.user else 'Unknown',
+                    'profile_picture': companion.request.user.userprofile.profile_picture.url if companion.request and companion.request.user and companion.request.user.userprofile.profile_picture else None,
                 })
 
-        # Render the results template
-        return render(request, 'rides/ride_taker_results.html', {'matched_rides': matched_rides})
+            if distance_to_pickup <= 4.0 and distance_from_dropoff <= 4.0:
+                is_100_percent = True
+                match_percent = 100
 
-    # Return fail status if the request method is not POST
-    return JsonResponse({'status': 'fail'})
+            matched_rides.append({
+                'ride_giver_start': ride.start_location,
+                'ride_taker_start': start,
+                'ride_taker_destination': destination,
+                'ride_giver_destination': ride.destination,
+                'ride': ride,
+                'date': date,
+                'time': time,
+                'distance': taker_total_distance,
+                'polyline': polyline,
+                'companions': companions_data,
+                'match_percent': round(match_percent),
+                'is_100_percent': is_100_percent,
+                'pickup_name': pickup_name,
+                'dropoff_name': dropoff_name,
+                'overlap_distance': overlapping_distance,
+                'taker_total_distance': taker_total_distance,
+                'distance_to_pickup': distance_to_pickup + 2.0,
+                'distance_from_dropoff': distance_from_dropoff + 2.0,
+                'estimated_pickup_time': estimated_pickup_time.strftime('%I:%M %p'),
+            })
 
+    matched_rides.sort(key=lambda x: x['match_percent'], reverse=True)
 
+    return render(request, 'rides/ride_taker_results.html', {
+        'matched_rides': matched_rides
+    })
 
 
 def load_model_and_encoders():
@@ -392,6 +682,124 @@ def load_model_and_encoders():
 model, label_encoder_model, label_encoder_fuel = load_model_and_encoders()
 
 
+CAR_RATINGS = {
+    'Maruti Suzuki Alto': 6,
+    'Maruti Suzuki Wagon R': 7,
+    'Maruti Suzuki Swift': 8,
+    'Maruti Suzuki Dzire': 8,
+    'Maruti Suzuki Baleno': 9,
+    'Maruti Suzuki Brezza': 10,
+    'Maruti Suzuki Grand Vitara': 11,
+    'Maruti Suzuki Ciaz': 11,
+    'Maruti Suzuki XL6': 10,
+    'Maruti Suzuki Eeco': 5,
+    'Maruti Suzuki Fronx': 9,
+    'Maruti Suzuki Maruti 800': 5,
+    'Maruti Suzuki Ignis': 6,
+    'Hyundai Grand i10 Nios': 8,
+    'Hyundai i20': 9,
+    'Hyundai Creta': 11,
+    'Hyundai Venue': 10,
+    'Hyundai Verna': 11,
+    'Hyundai Alcazar': 12,
+    'Hyundai Kona Electric': 14,
+    'Hyundai Exter': 9,
+    'Hyundai Tucson': 12,
+    'Hyundai Ioniq 5': 15,
+    'Kia Seltos': 11,
+    'Kia Carens': 12,
+    'Kia Sonet': 10,
+    'Kia EV6': 15,
+    'Kia Carnival': 14,
+    'Kia Sportage': 13,
+    'Tata Nexon': 10,
+    'Tata Punch': 9,
+    'Tata Tiago': 8,
+    'Tata Harrier': 12,
+    'Tata Safari': 12,
+    'Tata Nexon EV': 14,
+    'Tata Altroz': 9,
+    'Tata Tigor EV': 13,
+    'Tata Hexa': 11,
+    'Mahindra Scorpio': 12,
+    'Mahindra Thar': 11,
+    'Mahindra XUV700': 13,
+    'Mahindra Bolero': 9,
+    'Mahindra XUV300': 10,
+    'Mahindra XUV400 EV': 14,
+    'Mahindra Marazzo': 10,
+    'Toyota Fortuner': 13,
+    'Toyota Innova Crysta': 12,
+    'Toyota Camry': 14,
+    'Toyota Corolla Altis': 11,
+    'Toyota Hilux': 13,
+    'Toyota Vellfire': 14,
+    'Toyota Urban Cruiser Hyryder': 11,
+    'Honda City': 10,
+    'Honda Amaze': 9,
+    'Honda WR-V': 10,
+    'Honda Civic': 12,
+    'Honda BR-V': 10,
+    'Renault Kwid': 6,
+    'Renault Triber': 8,
+    'Renault Kiger': 9,
+    'Skoda Kushaq': 11,
+    'Skoda Slavia': 11,
+    'Skoda Octavia': 12,
+    'Skoda Superb': 14,
+    'Volkswagen Taigun': 11,
+    'Volkswagen Polo': 9,
+    'Volkswagen Tiguan': 12,
+    'Volkswagen Virtus': 11,
+    'Mercedes-Benz C-Class': 13,
+    'Mercedes-Benz E-Class': 15,
+    'Mercedes-Benz GLS': 15,
+    'Mercedes-Benz G-Class': 16,
+    'BMW 3 Series': 13,
+    'BMW X1': 13,
+    'BMW X5': 15,
+    'Audi Q3': 13,
+    'Audi A8 L': 15,
+    'Volvo XC40': 13,
+    'Jaguar F-Pace': 14,
+    'Land Rover Discovery Sport': 15,
+    'Land Rover Defender': 16,
+    'Jeep Compass': 12,
+    'Jeep Grand Cherokee': 15,
+     'Lexus RX 500h': 15,
+    'Porsche Macan': 16,
+    'Ferrari Roma': 16,
+    'Lamborghini Urus': 16,
+    'Rolls-Royce Ghost': 16,
+     'Nissan Magnite': 9,
+    'Nissan Terrano': 10,
+    'MG Hector': 12,
+    'MG ZS EV': 14,
+    'BYD Atto 3': 14,
+    'Mini Cooper SE': 14,
+    'Mitsubishi Pajero Sport': 12,
+    'Isuzu D-Max V-Cross': 13,
+     'Fiat Punto': 7,
+    'Fiat Linea': 8,
+    'Fiat Abarth Punto': 8,
+    'Fiat Urban Cross': 8,
+    'Fiat Avventura': 8,
+    'Fiat 500': 9,
+     'Ford EcoSport': 9,
+     'Maruti Suzuki Defender': 16,
+     'Nissan Micra':	7,
+      'Nissan Sunny':	8,
+      'Nissan Kicks':	9,
+      'Nissan GT-R':	16,
+       'Nissan X-Trail':	13,
+       'Nissan Leaf':	12,
+      'Nissan Patrol':	14,
+      'Nissan Terra':	11,
+       'Nissan Compact MPV':	8,
+      'Nissan Compact SUV':	10,
+     'Hyundai Getz': 6
+}
+
 @csrf_exempt
 def predict_cost(request):
     if request.method == 'POST':
@@ -399,19 +807,23 @@ def predict_cost(request):
         car_model = request.POST.get('car_model')
         fuel_type = request.POST.get('fuel_type')
 
-        # Encode the inputs
-        car_model_encoded = label_encoder_model.transform([car_model])[0]
-        fuel_type_encoded = label_encoder_fuel.transform([fuel_type])[0]
-        
-        # Prepare the input for prediction
-        X_input = np.array([[car_model_encoded, fuel_type_encoded, distance]])
+        if car_model not in CAR_RATINGS:
+             return JsonResponse({'error': 'Invalid car model'}, status=400)
 
+        rating = CAR_RATINGS.get(car_model)
+        base_cost = distance * (rating / 3.0)
         
-        # Make prediction
-        predicted_cost = model.predict(X_input)[0]
+        if fuel_type == 'diesel':
+              cost = base_cost * Decimal('0.95')
+        elif fuel_type == 'ev':
+             cost = base_cost * Decimal('0.90')
+        elif fuel_type == 'hybrid':
+            cost = base_cost * Decimal('0.92')
+        else: # petrol
+            cost = base_cost
         
-        return JsonResponse({'predicted_cost': predicted_cost})
-    
+        return JsonResponse({'predicted_cost': float(cost)})
+
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
@@ -473,15 +885,15 @@ def save_ride_giver(request):
     if request.method == 'POST':
         user = request.user  # Get the current logged-in user
         car = request.POST.get('car')
+        vehicle_number = request.POST.get('mobile_number')
         fuel_type = request.POST.get('fuel_type')
-        mobile_number = request.POST.get('mobile_number')
         features = request.POST.get('features')
 
         form = RideForm()  # Create a blank form or use this according to your flow
 
         try:
             # Attempt to create and save RideGiver
-            RideGiver.objects.create(user=user, car=car, fuel_type=fuel_type, features=features, mobile_number=mobile_number)
+            RideGiver.objects.create(user=user, car=car, fuel_type=fuel_type, features=features, vehicle_number=vehicle_number)
             messages.success(request, 'RideGiver details saved successfully!')  # Success message
         except IntegrityError:
             # Handle the case where the user already has a RideGiver entry
@@ -508,7 +920,6 @@ class RideGiverUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required
 def view_upcoming_rides(request):
-
     try:
         ride_giver = RideGiver.objects.get(user=request.user)
     except RideGiver.DoesNotExist:
@@ -516,74 +927,139 @@ def view_upcoming_rides(request):
 
     today = datetime.now().date()
     now_time = datetime.now().time()
-    tomorrow = datetime.now().date() + timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
 
-
-    user_rides_today = Ride.objects.filter(
-         ride_giver__user=request.user,
-         ride_date=today,
-         ride_time__gte=now_time)
-
-    user_rides_future = Ride.objects.filter(
-         ride_giver__user=request.user,
-         ride_date__gt=today)
-
-    # Combine the two querysets using union
-    user_rides = user_rides_today.union(user_rides_future).order_by('-ride_date', '-ride_time')
-
-    user = request.user
+    # Get user rides with safe queries
+    user_rides = Ride.objects.filter(
+        Q(ride_giver__user=request.user, ride_date=today, ride_time__gte=now_time) |
+        Q(ride_giver__user=request.user, ride_date__gt=today)
+    ).order_by('-ride_date', '-ride_time')
     
-    travel_companions = JoinedRide.objects.filter(
-        Q(ride__ride_giver=ride_giver) | Q(request__user=user),
-        ride__ride_date__gte=today
-    )
+   # Get all relevant rides
+    all_rides = Ride.objects.filter(
+        Q(ride_giver__user=request.user) | Q(riderequest__user=request.user)
+    ).filter(
+        ride_date__gte=today
+    ).distinct()
 
-    # Prepare a dictionary to hold unique rides and their companions
+    # Process unique rides safely
     unique_rides = {}
-    for companions in travel_companions:
-        ride = companions.ride
+    for ride in all_rides:
         if ride not in unique_rides:
             unique_rides[ride] = {
-                'ride_giver': ride.ride_giver.user.username,
+                'ride_giver': (ride.ride_giver.user, ride.ride_giver.user.username) if ride.ride_giver and ride.ride_giver.user else (None, 'Unknown'),
                 'companions': []
             }
-        unique_rides[ride]['companions'].append(companions.request.user.username)
- 
+        # Get all accepted RideRequests for this ride
+        accepted_requests = RideRequest.objects.filter(ride=ride, status= 'joined')
+        for request_item in accepted_requests:
+           if request_item.user != request.user:
+            user = request_item.user
+            username = user.username
+            unique_rides[ride]['companions'].append((user, username))
 
-    # Apply different filters based on whether the ride date is today or in the future
-    user_requested_rides_today = RideRequest.objects.filter(
-        user=request.user,
-        ride__ride_date=today,
-        ride__ride_time__gte=now_time,
-        status__in=['requested', 'accepted']
-    ).exclude(id__in=JoinedRide.objects.values_list('request_id', flat=True))
-
-    user_requested_rides_future = RideRequest.objects.filter(
-        user=request.user,
-        ride__ride_date__gt=today,
-        status__in=['requested', 'accepted']
-    ).exclude(id__in=JoinedRide.objects.values_list('request_id', flat=True))
-
-    # Combine the two querysets using union
-    user_requested_rides = user_requested_rides_today.union(user_requested_rides_future).order_by('-ride_date', '-ride_time')
-
-
-    joined_rides = JoinedRide.objects.filter(
+    # Get joined rides - Modified to include completed rides for the current and next day
+    joined_rides = JoinedRide.objects.select_related(
+        'ride__ride_giver__user__userprofile',
+        'request__user'
+    ).filter(
         request__user=request.user,
-        status='joined',
         ride__ride_date__in=[today, tomorrow]
-    )
+    ).order_by('-ride__ride_date', '-ride__ride_time')
 
+    # Get existing reports safely
+    existing_reports = UserReport.objects.filter(
+        reporting_user=request.user
+    ).values_list('reported_user', 'ride')
+    reported_rides = set((user_id, ride_id) for user_id, ride_id in existing_reports)
+
+    # Get existing ratings safely
+    existing_ratings = Rating.objects.filter(
+        from_user=request.user
+    ).values_list('to_user', 'ride')
+    rated_rides = set((user_id, ride_id) for user_id, ride_id in existing_ratings)
+
+    # Add reporting and rating status safely for the ride taker
+    for joined_ride in joined_rides:
+        if joined_ride.ride and joined_ride.ride.ride_giver and joined_ride.ride.ride_giver.user:
+            reported_tuple = (joined_ride.ride.ride_giver.user.id, joined_ride.ride.id)
+            rated_tuple = (joined_ride.ride.ride_giver.user.id, joined_ride.ride.id)
+            joined_ride.already_reported = reported_tuple in reported_rides
+            joined_ride.already_rated = rated_tuple in rated_rides
+        else:
+            joined_ride.already_reported = False
+            joined_ride.already_rated = False
+
+    # Get requested rides safely - Modified to exclude completed rides
+    user_requested_rides = RideRequest.objects.select_related(
+        'ride__ride_giver__user__userprofile'
+    ).filter(
+        user=request.user,
+        status__in=['requested', 'accepted']
+    ).exclude(
+        id__in=JoinedRide.objects.values_list('request_id', flat=True)
+    ).filter(
+        Q(ride__ride_date=today, ride__ride_time__gte=now_time) |
+        Q(ride__ride_date__gt=today)
+    ).order_by('ride__ride_date', 'ride__ride_time')
+
+    # Get the list of joined passengers for the ride giver
+    if ride_giver:
+        ride_giver_joined_rides = JoinedRide.objects.filter(
+            ride__ride_giver=ride_giver,
+            ride__ride_date__in=[today, tomorrow]
+        ).order_by('-ride__ride_date', '-ride__ride_time')
+
+        # Get existing reports and ratings safely for ride giver for the ride taker
+        ride_giver_existing_reports = UserReport.objects.filter(
+            reporting_user=request.user
+        ).values_list('reported_user', 'ride')
+        ride_giver_reported_rides = set((user_id, ride_id) for user_id, ride_id in ride_giver_existing_reports)
+
+        ride_giver_existing_ratings = Rating.objects.filter(
+            from_user=request.user
+        ).values_list('to_user', 'ride')
+        ride_giver_rated_rides = set((user_id, ride_id) for user_id, ride_id in ride_giver_existing_ratings)
+
+        for joined in ride_giver_joined_rides:
+            if joined.request and joined.request.user and joined.ride:
+                ride_giver_reported_tuple = (joined.request.user.id, joined.ride.id)
+                ride_giver_rated_tuple = (joined.request.user.id, joined.ride.id)
+                joined.already_reported = ride_giver_reported_tuple in ride_giver_reported_rides
+                joined.already_rated = ride_giver_rated_tuple in ride_giver_rated_rides
+            else:
+                joined.already_reported = False
+                joined.already_rated = False
+    else:
+        ride_giver_joined_rides = []
+
+    # Add the list of joined passengers to the context
     context = {
         'user_rides': user_rides,
         'user_requested_rides': user_requested_rides,
         'joined_rides': joined_rides,
-        'travel_companions': travel_companions,
+        'travel_companions': unique_rides,  # changed the value here
         'unique_rides': unique_rides,
+        'today': today,
+        'tomorrow': tomorrow,
+        'ride_giver_joined_rides': ride_giver_joined_rides,
     }
 
     return render(request, 'rides/upcoming_rides.html', context)
 
+
+
+
+
+@login_required
+def mark_ride_completed(request, joined_ride_id):
+    joined_ride = get_object_or_404(JoinedRide, id=joined_ride_id)
+    if request.method == 'POST':
+        joined_ride.status = 'completed'
+        joined_ride.save()
+        messages.success(request, "Ride marked as completed.")
+        return redirect('view_upcoming_rides')  # Assuming 'view_upcoming_rides' is the view that displays the rides list
+    return render(request, 'rides/mark_ride_completed.html', {'joined_ride': joined_ride})
 
 
 def accept_request(request, request_id):
@@ -629,16 +1105,24 @@ class MyAccountView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
+        viewed_user = user  # Viewing their own profile
+
+        context['is_owner'] = True  # flag for my_account.html
+        context['viewed_user'] = viewed_user  # Ensure viewed_user is always in context
+
+        context['report_count'] = user.userprofile.report_count
+        context['average_rating'] = user.userprofile.average_rating
+
         # Joined rides where the current user has joined a ride as a ride taker
         joinedrides = JoinedRide.objects.filter(request__user=user)
 
         # Rides given by the user (as a ride giver)
         givenrides = Ride.objects.filter(ride_giver__user=user)
-        
+
         context['user_form'] = CustomUserChangeForm(instance=user)
         context['joinedrides'] = joinedrides
         context['givenrides'] = givenrides
+
 
         try:
             ride_giver = RideGiver.objects.get(user=user)
@@ -646,10 +1130,39 @@ class MyAccountView(LoginRequiredMixin, TemplateView):
         except RideGiver.DoesNotExist:
             context['account_balance'] = None
 
+        # Calculate rides taken count
+        rides_taken_count = RideRequest.objects.filter(user=user).count()
+        context['rides_taken_count'] = rides_taken_count
+
+        # Calculate rides created count
+        rides_created_count = Ride.objects.filter(ride_giver__user=user).count()
+        context['rides_created_count'] = rides_created_count
+
         return context
 
     def post(self, request, *args, **kwargs):
-        user_form = CustomUserChangeForm(request.POST, instance=request.user)
+        user = request.user
+        if 'profile_picture' in request.FILES:
+            profile_pic = request.FILES['profile_picture']
+            userprofile = user.userprofile
+
+            # Check file size
+            if profile_pic.size > 5 * 1024 * 1024:  # Limit to 5 MB
+                messages.error(request, 'Profile picture size must be 5MB or less.')
+                return redirect('my_account')
+            
+             # Check file type
+            allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+            if profile_pic.content_type not in allowed_types:
+                messages.error(request, 'Please upload a valid JPEG, PNG, or GIF file.')
+                return redirect('my_account')
+            userprofile.profile_picture = profile_pic
+            userprofile.save()
+            messages.success(request, 'Profile picture updated successfully!')
+            return redirect('my_account')
+
+
+        user_form = CustomUserChangeForm(request.POST, instance=user)
         if user_form.is_valid():
             user_form.save()
             messages.success(request, 'Your account details have been updated.')
@@ -661,6 +1174,45 @@ class CustomUserChangeForm(UserChangeForm):
     class Meta:
         model = User
         fields = ('username', 'email')
+
+
+
+@login_required
+def user_profile_view(request, user_id):
+    viewed_user = get_object_or_404(User, id=user_id)
+    context = {}
+
+    context['is_owner'] = (request.user.id == viewed_user.id)  # check if the user is the owner of the profile
+    context['viewed_user'] = viewed_user
+
+    context['report_count'] = viewed_user.userprofile.report_count
+    context['average_rating'] = viewed_user.userprofile.average_rating
+     
+    # Profile picture url
+    if hasattr(viewed_user, 'userprofile') and viewed_user.userprofile.profile_picture:
+            context['profile_picture_url'] = viewed_user.userprofile.profile_picture.url
+    else:
+        context['profile_picture_url'] = None
+
+
+    # Calculate rides taken count for the viewed user
+    rides_taken_count = RideRequest.objects.filter(user=viewed_user).count()
+    context['rides_taken_count'] = rides_taken_count
+
+    # Calculate rides created count for the viewed user
+    rides_created_count = Ride.objects.filter(ride_giver__user=viewed_user).count()
+    context['rides_created_count'] = rides_created_count
+
+     # Joined rides where the current user has joined a ride as a ride taker
+    joinedrides = JoinedRide.objects.filter(request__user=viewed_user)
+
+    # Rides given by the user (as a ride giver)
+    givenrides = Ride.objects.filter(ride_giver__user=viewed_user)
+
+    context['joinedrides'] = joinedrides
+    context['givenrides'] = givenrides
+
+    return render(request, 'rides/user_profile.html', context)  # different html file
 
 
 
@@ -783,22 +1335,119 @@ def dummy_payment(request, request_id):
 
 
 
+from groq import Groq
 
+groq_client = Groq(
+    api_key=settings.GROQ_API_KEY  # Get the API key from settings.py
+)
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-chatbot_model = genai.GenerativeModel('gemini-pro')
 
 def chatbot(request):
     if request.method == 'POST':
         user_input = request.POST.get('user_input', '')
+
+        # Get chat history from session
+        chat_history = request.session.get('chat_history', [])
+        # Add user input to chat history
+        chat_history.append({"role": "user", "content": user_input})
         
-        response = chatbot_model.generate_content(user_input)
         
-        return JsonResponse({'response': response.text})
-    
+        # Initialize user data string
+        user_data_str = ""
+
+        if request.user.is_authenticated:
+          user = request.user
+          try:
+              user_profile = UserProfile.objects.get(user=user)
+              mobile_number = user_profile.mobile_number if user_profile.mobile_number else "Not Available"
+          except UserProfile.DoesNotExist:
+              mobile_number = "Not Available"
+          user_data_str += f"User details: username: {user.username}, email: {user.email}, mobile number: {mobile_number}. \n"
+            
+          try:
+              ride_giver = RideGiver.objects.get(user=user)
+              user_data_str += f"Ride giver details: car model: {ride_giver.car}, fuel type: {ride_giver.fuel_type}, vehicle number: {ride_giver.vehicle_number}, account balance: {ride_giver.account_balance}. \n"
+          except RideGiver.DoesNotExist:
+            user_data_str += "Ride giver details: Not registered as a ride giver. \n"
+
+          # Fetch Ride Data for the Current User (as a Ride Giver)
+          rides_given = Ride.objects.filter(ride_giver__user=user)
+          if rides_given.exists():
+              user_data_str += "Rides created by you:\n"
+              for ride in rides_given:
+                  user_data_str += f"Ride ID: {ride.id}, Car Model: {ride.car_model}, Start location: {ride.start_location}, Destination: {ride.destination}, Ride date: {ride.ride_date}, Ride Time: {ride.ride_time}.\n"
+          else:
+              user_data_str += "Rides created by you: No rides created yet.\n"
+          
+          # Fetch Ride Request Data
+          ride_requests = RideRequest.objects.filter(user=user)
+          if ride_requests.exists():
+            user_data_str += "Ride requests made by you:\n"
+            for request_obj in ride_requests:
+              user_data_str += f"Ride ID: {request_obj.ride.id}, Car Model: {request_obj.car_model}, Ride Giver Start: {request_obj.ride_giver_start}, Ride Giver Destination: {request_obj.ride_giver_destination}, Ride Date: {request_obj.ride_date}, Ride Time: {request_obj.ride_time}, Start location: {request_obj.start_location}, Destination: {request_obj.destination}, Distance: {request_obj.distance} km, Cost: {request_obj.cost}, Status: {request_obj.status}.\n"
+          else:
+            user_data_str += "Ride requests made by you: No ride requests made yet.\n"
+
+          # Fetch Joined Ride Data
+          joined_rides = JoinedRide.objects.filter(request__user=user)
+          if joined_rides.exists():
+              user_data_str += "Joined Rides with you:\n"
+              for joined_ride in joined_rides:
+                  user_data_str += f"Joined Ride ID: {joined_ride.id}, Ride ID: {joined_ride.ride.id}, Status: {joined_ride.status}.\n"
+          else:
+              user_data_str += "Joined Rides with you: No joined rides yet.\n"
+        else:
+            user_data_str = "User not logged in. Please log in to access personalized data."
+
+
+        INITIAL_PROMPT = f"""You are a helpful and friendly chatbot specifically designed to assist users with ShareRide, a carpooling app. 
+        ShareRide provides online carpool services in Kerala. The app was developed in 2025 by Athul K Jose and headquartered in Kerala, India.
+        You should focus on queries related to carpooling, rides, app features, or the company information. 
+        If the user asks a general question outside these topics, respond with "I can't answer that." If the user asks for irrelevant questions respond "I cant answer that".
+        If the user says hi or hello or introduces themselves, then greet them.
+        For the first message, you should respond with "Welcome to ShareRide! How can I help you?". Remember previous interactions.
+        give proper next line break after every sentence.
+        dont give * in the response.
+        
+        {user_data_str}
+        note that username is same as my name.
+        and note that the Ride model is for - ride that is created (by the ride giver)
+        RideGiver - RideGiver details
+        RideRequest - Ride requested by the passengers(Ride Takers)
+        JoinedRide - data related to the both the ride taker and ride giver in a joined ride (give this in prompt(the data is related to what)).
+        note that dont provide any ids in reponses like ride id, riderequest id etc. but you can provide email id, username, mobile number, vehicle number etc.
+        give these informations if the user asks it only.
+        """
+        # construct prompt
+        messages=[
+                {"role": "system", "content": INITIAL_PROMPT},
+            ]
+        messages.extend(chat_history)
+        
+        try:
+            chat_completion = groq_client.chat.completions.create(
+                messages=messages,
+                model="mixtral-8x7b-32768",
+            )
+            response = chat_completion.choices[0].message.content
+
+            # Add line breaks to the response
+            response_with_breaks = response.replace(". ", ".<br>")
+
+
+            # Add bot's response to chat history
+            chat_history.append({"role":"assistant", "content":response_with_breaks})
+
+            # update session with new chat history
+            request.session['chat_history'] = chat_history
+
+        except Exception as e:
+            response = f"Error during API call: {e}"
+
+        return JsonResponse({'response': response_with_breaks})
+
+    request.session['chat_history'] = []
     return render(request, 'rides/chatbot.html')
-
-
 
 
 
@@ -939,3 +1588,280 @@ def reports_view(request):
     }
     return render(request, 'rides/reports.html', context)
 
+
+
+
+
+
+@login_required
+def sos_alert(request):
+    if request.method == 'POST':
+        user = request.user
+        current_time = datetime.now()
+
+        # Get current ride details
+        try:
+            # Check if user is a ride taker
+            joined_ride = JoinedRide.objects.filter(
+                request__user=user,
+                request__status='joined',
+                status='joined'
+            ).first()
+
+            if joined_ride:
+                ride = joined_ride.ride
+                ride_giver = ride.ride_giver
+                ride_companions = JoinedRide.objects.filter(
+                    ride=ride,
+                    status='joined'
+                ).exclude(request__user=user)
+
+                # Prepare ride details
+                ride_details = f"""
+Emergency Alert from Ride Taker: {user.username}
+User's Contact: {user.userprofile.mobile_number}
+Time of Alert: {current_time}
+
+Ride Details:
+-------------
+From: {ride.start_location}
+To: {ride.destination}
+Date: {ride.ride_date}
+Time: {ride.ride_time}
+
+Ride Giver Details:
+------------------
+Name: {ride_giver.user.username}
+Contact: {ride_giver.user.userprofile.mobile_number}
+Vehicle: {ride_giver.car}
+Vehicle Number: {ride_giver.vehicle_number}
+
+Ride Companions:
+---------------
+"""
+                for companion in ride_companions:
+                    ride_details += f"Name: {companion.request.user.username}\n"
+                    ride_details += f"Contact: {companion.request.user.userprofile.mobile_number}\n\n"
+
+            else:
+                # Check if user is a ride giver
+                ride = Ride.objects.filter(
+                    ride_giver__user=user,
+                    joinedride__status='joined'
+                ).first()
+
+                if ride:
+                    ride_companions = JoinedRide.objects.filter(
+                        ride=ride,
+                        status='joined'
+                    )
+
+                    # Prepare ride details
+                    ride_details = f"""
+Emergency Alert from Ride Giver: {user.username}
+User's Contact: {user.userprofile.mobile_number}
+Time of Alert: {current_time}
+
+Ride Details:
+-------------
+From: {ride.start_location}
+To: {ride.destination}
+Date: {ride.ride_date}
+Time: {ride.ride_time}
+
+Vehicle Details:
+---------------
+Car Model: {ride.car_model}
+Vehicle Number: {ride.ride_giver.vehicle_number}
+
+Ride Companions:
+---------------
+"""
+                    for companion in ride_companions:
+                        ride_details += f"Name: {companion.request.user.username}\n"
+                        ride_details += f"Contact: {companion.request.user.userprofile.mobile_number}\n\n"
+
+                else:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'No active ride found'
+                    })
+
+            # Send email
+            send_mail(
+                subject='SHARERIDE - SOS ALERT!',
+                message=ride_details,
+                from_email='athul.23pmc116@mariancollege.org',
+                recipient_list=['athulkjose001@gmail.com'],
+                fail_silently=False,
+            )
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Emergency alert sent successfully'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+
+
+def check_sos_status(request):
+    ride_request_exists = RideRequest.objects.filter(user=request.user, status='joined').exists()
+    ride_giver_with_joined = Ride.objects.filter(
+        ride_giver=request.user, 
+        ride_requests__status='joined'
+    ).exists()
+
+    sos_visible = ride_request_exists or ride_giver_with_joined
+    return JsonResponse({'sos_visible': sos_visible})
+
+
+
+
+@login_required
+def report_user(request, user_id, ride_id):
+    if request.method == 'POST':
+        reported_user = get_object_or_404(User, id=user_id)
+        ride = get_object_or_404(Ride, id=ride_id)
+        reason = request.POST.get('reason')
+        
+        try:
+            report = UserReport.objects.create(
+                reported_user=reported_user,
+                reporting_user=request.user,
+                reason=reason,
+                ride=ride
+            )
+            
+            # Check if user has 2 or more reports
+            report_count = UserReport.objects.filter(reported_user=reported_user).count()
+            if report_count >= 2:
+                user_profile = reported_user.userprofile
+                user_profile.ban_user()
+                messages.warning(request, "User has been banned due to multiple reports.")
+            
+            messages.success(request, "User has been reported successfully.")
+        except IntegrityError:
+            messages.error(request, "You have already reported this user for this ride.")
+            
+        return redirect('view_upcoming_rides')
+    
+    return render(request, 'rides/report_user.html', {
+        'reported_user_id': user_id,
+        'ride_id': ride_id
+    })
+
+
+
+
+def rate_user(request, user_id, ride_id):
+    if request.method == 'POST':
+        rating_value = request.POST.get('rating')
+        ride = get_object_or_404(Ride, id=ride_id)
+        to_user = get_object_or_404(User, id=user_id)
+        
+        Rating.objects.create(
+            from_user=request.user,
+            to_user=to_user,
+            ride=ride,
+            rating=rating_value
+        )
+        
+        messages.success(request, 'Rating submitted successfully!')
+        return redirect('view_upcoming_rides')
+        
+    ride = get_object_or_404(Ride, id=ride_id)
+    to_user = get_object_or_404(User, id=user_id)
+    
+    return render(request, 'rides/rate_user.html', {
+        'to_user': to_user,
+        'ride': ride
+    })
+
+
+
+
+
+@login_required
+def message_list(request):
+    """Displays a list of users with whom the current user has messaged."""
+    user = request.user
+
+    # Find all unique users the current user has sent messages to or received messages from
+    sent_to = Message.objects.filter(sender=user).values_list('receiver', flat=True).distinct()
+    received_from = Message.objects.filter(receiver=user).values_list('sender', flat=True).distinct()
+
+    # Combine the lists and remove duplicates
+    all_users_ids = set(list(sent_to) + list(received_from))
+    users = [User.objects.get(pk=user_id) for user_id in all_users_ids]
+
+    # Count unread messages for each user
+    unread_counts = {}
+    for other_user in users:
+        unread_counts[other_user.id] = Message.objects.filter(
+            sender=other_user, receiver=user, is_read=False).count()
+
+    context = {
+        'users': users,
+        'unread_counts': unread_counts,
+    }
+    return render(request, 'rides/message_list.html', context)
+
+
+@login_required
+def conversation(request, user_id):
+    """Displays the conversation between the current user and another user."""
+    other_user = get_object_or_404(User, id=user_id)
+    user = request.user
+
+    # Get all messages between the two users, ordered by timestamp
+    messages = Message.objects.filter(
+        Q(sender=user, receiver=other_user) | Q(sender=other_user, receiver=user)
+    ).order_by('timestamp')
+
+    # Mark received messages as read  (Move this to AJAX)
+    #Message.objects.filter(sender=other_user, receiver=user, is_read=False).update(is_read=True)
+
+    context = {
+        'other_user': other_user,
+        'messages': messages,
+    }
+    return render(request, 'rides/conversation.html', context)
+
+
+@login_required
+def update_message_status(request, message_id, status_type):
+    """Updates the message status (sent, delivered, read)."""
+    try:
+        message = Message.objects.get(pk=message_id, receiver=request.user)  # Only allow receiver to update
+    except Message.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Message not found or unauthorized'})
+
+    if status_type == 'delivered':
+        message.delivered = True
+    elif status_type == 'read':
+        message.read = True
+    message.save()
+
+    return JsonResponse({'status': 'success'})
+
+
+@csrf_exempt  # Only use this if you have CSRF issues with AJAX
+def mark_messages_as_read(request, user_id):
+    """Marks all unread messages from a specific user as read."""
+    if request.method == 'POST':
+        sender = get_object_or_404(User, id=user_id)
+        receiver = request.user
+        Message.objects.filter(sender=sender, receiver=receiver, is_read=False).update(is_read=True)
+        return JsonResponse({'status': 'success'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 from decouple import config
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -33,6 +34,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'carpool_app',
-    'rest_framework',
+    'channels',
     'chatbot',
 ]
 
@@ -73,7 +75,26 @@ TEMPLATES = [
     },
 ]
 
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],  # Update if your Redis is on a different host/port
+        },
+    },
+}
+
 WSGI_APPLICATION = 'shareride.wsgi.application'
+
+ASGI_APPLICATION = 'shareride.asgi.application'  # Replace with your project name
+
+# Use in-memory channel layer for development (for production, use Redis or Database-backed layer)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Database
@@ -82,10 +103,17 @@ WSGI_APPLICATION = 'shareride.wsgi.application'
 
 import dj_database_url
 
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgres://postgres:Cricket123.@database-1.ctcsogy4gek9.eu-north-1.rds.amazonaws.com:5432/ShareRide'
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'Athulkjose123.',
+        'HOST': 'postgres.ctcsogy4gek9.eu-north-1.rds.amazonaws.com',
+        'PORT': '5432',
+    
+    }
 }
 
 
@@ -122,10 +150,15 @@ USE_L10N = True
 USE_TZ = True
 
 
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -200,4 +233,10 @@ EMAIL_USE_TLS = True
 
 
 
-GEMINI_API_KEY = config('GEMINI_API_KEY')
+
+GROQ_API_KEY = config('GROQ_API_KEY')
+
+
+
+
+

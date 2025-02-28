@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareRide - Matched Rides</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBWiaQOlHHbjGmE0rH4ryTDchO0ONSwCGw&libraries=geometry"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=geometry"></script>
     <style>
+        /* Inherited styles from upcoming_rides.html */
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
+            color: #343a40;
         }
 
         .header {
@@ -28,86 +31,570 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
 
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: #4CAF50 !important;
+        }
+
+        .nav-link {
+            color: #333 !important;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #4CAF50 !important;
+        }
+
+        /* Existing styles (retained and adapted) */
+        :root {
+            --primary: #36B37E;
+            --primary-dark: #2E9E6C;
+            --secondary: #00B8D9;
+            --accent: #6554C0;
+            --light: #F4F5F7;
+            --dark: #253858;
+            --danger: #FF5630;
+            --warning: #FFAB00;
+            --success: #36B37E;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header .lead {
+            font-size: 1.5rem;
+            font-weight: 500;
+            position: relative;
+            z-index: 2;
+            opacity: 0.9;
+        }
+
+        .header i {
+            margin-right: 10px;
+            animation: drive 3s infinite linear;
+            display: inline-block;
+        }
+
+        @keyframes drive {
+            0% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            100% { transform: translateX(-5px); }
+        }
+
         .table-container {
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin-top: 2rem;
-            width: 95%; /* Increased width */
-            max-width: 1400px; /* Added max-width for very large screens */
+            border-radius: 12px; /* Match upcoming_rides.html frame style */
+            box-shadow: var(--shadow);
+            padding: 20px; /* Match upcoming_rides.html frame style */
+            margin-top: 20px; /* Adjusted for new header */
+            width: 95%;
+            max-width: 1400px;
             margin-left: auto;
             margin-right: auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .table {
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+            padding: 1rem;
+            border-top: none;
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .table thead th {
+            border-bottom: 2px solid rgba(0,0,0,.1);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            color: var(--dark);
+            background-color: #F9FAFB;
         }
 
         .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(0,0,0,.05);
+            background-color: #F9FAFB;
         }
 
-        .btn-custom {
-            background-color: #4CAF50;
-            border-color: #4CAF50;
-            color: white;
+        .table-hover tbody tr:hover {
+            background-color: rgba(54, 179, 126, 0.05);
+            transition: background-color 0.2s ease;
         }
 
-        .btn-custom:hover {
-            background-color: #45a049;
-            border-color: #45a049;
+        .btn {
+            border-radius: 50px; /* Match upcoming_rides.html button style */
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 10px rgba(54, 179, 126, 0.3);
+        }
+
+        .btn-info {
+            background-color: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .btn-info:hover, .btn-info:focus {
+            background-color: #0099B8;
+            border-color: #0099B8;
+            box-shadow: 0 4px 10px rgba(0, 184, 217, 0.3);
         }
 
         .cost-display {
-            margin-top: 10px;
+            margin-top: 12px;
             font-size: 1.1em;
-            font-weight: bold;
-            color: #4CAF50;
+            font-weight: 600;
+            color: var(--primary);
+            padding: 5px 10px;
+            background-color: rgba(54, 179, 126, 0.1);
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .profile-picture-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+            vertical-align: middle;
+            display: inline-block;
+            margin-top: -5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 2px solid white;
+        }
+        
+        .profile-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .profile-container a {
+            color: var(--accent);
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .profile-container a:hover {
+            color: #4F43A0;
+            text-decoration: none;
+        }
+        
+        .travel-companion-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .travel-companion {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            background-color: rgba(101, 84, 192, 0.05);
+            padding: 5px 10px;
+            border-radius: 20px;
+            transition: transform 0.2s ease;
+        }
+        
+        .travel-companion:hover {
+            transform: translateY(-2px);
+        }
+        
+        .travel-companion-picture {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .travel-companion-name {
+            margin-bottom: 0;
+            line-height: 1;
+        }
+        
+        .travel-companion-name a {
+            color: var(--dark);
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .travel-companion-name a:hover {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .highlight-column {
+            background-color: rgba(255, 86, 48, 0.05) !important;
+            position: relative;
+        }
+        
+        .highlight-column::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: var(--danger);
+            border-radius: 4px;
+        }
+        
+        .match-percentage {
+            font-size: 0.9em;
+            color: var(--secondary);
+            display: block;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        
+        .additional-distance {
+            font-size: 0.85em;
+            display: block;
+            margin-top: 8px;
+            color: #6c757d;
+            background-color: rgba(0,0,0,0.03);
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
-        /* Highlight Your Pickup Location and Your Drop Off Location */
-        .highlight-column {
-            background-color: #FFADB0 !important;
-            font-weight: bold;
+        .progress {
+            height: 25px;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 140px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: width 0.6s ease;
+        }
+
+        .progress-bar.bg-success {
+            background: linear-gradient(45deg, var(--success) 0%, #4ECDC4 100%);
+        }
+
+        .progress-bar.bg-warning {
+            background: linear-gradient(45deg, var(--warning) 0%, #FFC400 100%);
+        }
+
+        .badge {
+            padding: 0.5em 0.8em;
+            border-radius: 6px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge-success {
+            background: linear-gradient(45deg, var(--success) 0%, #4ECDC4 100%);
+        }
+
+        .location-info {
+            margin-bottom: 8px;
+        }
+
+        .location-info strong {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .route-container {
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .route-container::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 24px;
+            bottom: 4px;
+            width: 2px;
+            background-color: #E0E0E0;
+            z-index: 1;
+        }
+
+        .location-from, .location-to {
+            position: relative;
+        }
+
+        .location-from::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .location-to::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            background-color: var(--danger);
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .alert {
+            border-radius: 10px;
+            font-weight: 500;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .alert-warning {
+            background-color: rgba(255, 171, 0, 0.1);
+            border-color: rgba(255, 171, 0, 0.3);
+            color: #BD8200;
+        }
+
+        .alert i {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .pickup-time {
+            font-weight: 600;
+            color: var(--dark);
+            padding: 5px 10px;
+            background-color: rgba(0,0,0,0.03);
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .features-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: rgba(101, 84, 192, 0.1);
+            color: var(--accent);
+            border-radius: 4px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .car-model {
+            display: flex;
+            align-items: center;
+        }
+
+        .car-icon {
+            margin-right: 10px;
+            color: var(--secondary);
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 992px) {
+            .table-container {
+                padding: 1rem;
+                overflow-x: auto;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1><i class="fas fa-car-side"></i> ShareRide</h1>
-        <p class="lead">Matched Rides</p>
+        <p class="lead">Find Your Perfect Ride Match</p>
     </div>
+
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'give_rides' %}"><i class="fas fa-plus-circle"></i> Create Ride</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chatbot' %}"><i class="fas fa-comment-dots"></i> ChatBot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'my_account' %}"><i class="fas fa-user"></i> My Account</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> LogOut</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
     <div class="container-fluid table-container">
         {% if matched_rides %}
             <table class="table table-striped table-hover">
-                <thead class="thead-dark">
+                <thead>
                     <tr>
+                        <th>Match</th>
                         <th>Ride Giver</th>
                         <th>Car Model</th>
+                        <th>Travel Companions</th>
                         <th>Features</th>
                         <th>Route</th>
-                        <th>Ride Starting Time</th>
-                        <th class="highlight-column">Your Pickup Location</th>
-                        <th class="highlight-column">Your Drop Off Location</th>
-                        <th>Distance</th>
+                        <th>Pickup Time</th>
+                        <th class="highlight-column">Your Pickup</th>
+                        <th class="highlight-column">Your Dropoff</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ride in matched_rides %}
                         <tr>
-                            <td>{{ ride.ride.ride_giver }}</td>
-                            <td>{{ ride.ride.car_model }}</td>
-                            <td>{{ ride.ride.ride_giver.features }}</td>
                             <td>
-                                <strong>From:</strong> {{ ride.ride.start_location }}<br>
-                                <strong>To:</strong> {{ ride.ride.destination }}
+                                {% if ride.is_100_percent %}
+                                    <span class="badge badge-success">100% Perfect Match</span>
+                                {% else %}
+                                    <div class="progress">
+                                        <div class="progress-bar
+                                            {% if ride.match_percent >= 90 %}bg-success
+                                            {% elif ride.match_percent >= 70 %}bg-warning
+                                            {% endif %}"
+                                            role="progressbar"
+                                            style="width: {{ ride.match_percent }}%">
+                                            {{ ride.match_percent|floatformat:0 }}% Match
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </td>
-                            <td>{{ ride.ride.ride_time }}</td>
-                            <td class="highlight-column">{{ ride.ride_taker_start }}</td>
-                            <td class="highlight-column">{{ ride.ride_taker_destination }}</td>
-                            <td>{{ ride.distance }} KM</td>
                             <td>
-                                <button class="btn btn-info btn-sm" onclick="viewCost('{{ ride.ride.id }}', '{{ ride.ride.car_model }}', '{{ ride.ride.ride_giver.fuel_type }}', {{ ride.distance }})">View Cost</button>
-                                <div id="cost-{{ ride.ride.id }}" class="cost-display"></div>
+                                <div class="profile-container">
+                                    {% if ride.ride.ride_giver.user.userprofile.profile_picture %}
+                                        <img src="{{ ride.ride.ride_giver.user.userprofile.profile_picture.url }}" alt="Profile Picture" class="profile-picture-small">
+                                    {% else %}
+                                        <div class="profile-picture-small" style="background-color: #6554C0; display: flex; align-items: center; justify-content: center; color: white;">
+                                            {{ ride.ride.ride_giver|slice:":1" }}
+                                        </div>
+                                    {% endif %}
+                                    <a href="{% url 'user_profile' user_id=ride.ride.ride_giver.user.id %}">{{ ride.ride.ride_giver }}</a>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="car-model">
+                                    <i class="fas fa-car car-icon"></i>
+                                    {{ ride.ride.car_model }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="travel-companion-container">
+                                    {% if ride.companions %}
+                                        {% for companion in ride.companions %}
+                                            <div class="travel-companion">
+                                                {% if companion.profile_picture %}
+                                                    <img src="{{ companion.profile_picture }}" alt="Profile Picture" class="travel-companion-picture">
+                                                {% else %}
+                                                    <div class="travel-companion-picture" style="background-color: #6554C0; display: flex; align-items: center; justify-content: center; color: white;">
+                                                        {{ companion.username|slice:":1" }}
+                                                    </div>
+                                                {% endif %}
+                                                <p class="travel-companion-name">
+                                                    <a href="{% url 'user_profile' user_id=companion.user_id %}">{{ companion.username }}</a>
+                                                </p>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge badge-light">No Companions Yet</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="features-container">
+                                    <span class="features-tag">{{ ride.ride.ride_giver.features }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="route-container">
+                                    <div class="location-info location-from">
+                                        <strong>From:</strong> {{ ride.ride.start_location }}
+                                    </div>
+                                    <div class="location-info location-to">
+                                        <strong>To:</strong> {{ ride.ride.destination }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="pickup-time">
+                                    <i class="far fa-clock mr-1"></i> {{ ride.estimated_pickup_time }}
+                                </div>
+                            </td>
+                            <td class="highlight-column">
+                                {% if ride.is_100_percent %}
+                                    {{ ride.ride_taker_start }}
+                                {% else %}
+                                    {{ ride.pickup_name }}
+                                    {% if ride.distance_to_pickup > 3.1 %}
+                                        <span class="additional-distance">
+                                            <i class="fas fa-map-marker-alt mr-1"></i>
+                                            {{ ride.distance_to_pickup|floatformat:1 }} km from start
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="highlight-column">
+                                {% if ride.is_100_percent %}
+                                    {{ ride.ride_taker_destination }}
+                                {% else %}
+                                    {{ ride.dropoff_name }}
+                                    {% if ride.distance_from_dropoff > 3.1 %}
+                                         <span class="additional-distance">
+                                             <i class="fas fa-map-marker-alt mr-1"></i>
+                                             {{ ride.distance_from_dropoff|floatformat:1 }} km from destination
+                                         </span>
+                                     {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-info btn-sm mb-2 w-100" onclick="viewCost('{{ ride.ride.id }}', '{{ ride.ride.car_model }}', '{{ ride.ride.ride_giver.fuel_type }}', {{ ride.overlap_distance }})">
+                                    <i class="fas fa-calculator mr-1"></i> View Cost
+                                </button>
+                                <div id="cost-{{ ride.ride.id }}" class="cost-display" style="display: none;"></div>
                                 <form method="post" action="{% url 'request_ride' %}" id="request-form-{{ ride.ride.id }}" class="request-ride-form mt-2">
                                     {% csrf_token %}
                                     <input type="hidden" name="ride_id" value="{{ ride.ride.id }}">
@@ -119,7 +606,9 @@
                                     <input type="hidden" name="time" value="{{ ride.time }}">
                                     <input type="hidden" name="polyline" value="{{ ride.polyline }}">
                                     <input type="hidden" name="cost" id="cost-input-{{ ride.ride.id }}">
-                                    <button type="submit" class="btn btn-primary btn-sm request-ride-btn" style="display:none;">Request Ride</button>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 request-ride-btn" style="display:none;">
+                                        <i class="fas fa-check-circle mr-1"></i> Request Ride
+                                    </button>
                                 </form>
                             </td>
                         </tr>
@@ -128,7 +617,7 @@
             </table>
         {% else %}
             <div class="alert alert-warning text-center" role="alert">
-                <i class="fas fa-exclamation-triangle"></i> No rides found that match your criteria.
+                <i class="fas fa-exclamation-triangle"></i> No rides found that match your criteria. Try adjusting your search parameters.
             </div>
         {% endif %}
     </div>
@@ -139,6 +628,12 @@
 
     <script>
         function viewCost(rideId, carModel, fuelType, distance) {
+            const costDisplay = document.getElementById('cost-' + rideId);
+            
+            // Show loading state
+            costDisplay.style.display = 'inline-block';
+            costDisplay.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calculating...';
+            
             fetch("{% url 'predict_cost' %}", {
                 method: 'POST',
                 headers: {
@@ -153,23 +648,42 @@
             })
             .then(response => response.json())
             .then(data => {
-                const costDisplay = document.getElementById('cost-' + rideId);
                 const costInput = document.getElementById('cost-input-' + rideId);
                 const requestButton = document.querySelector('#request-form-' + rideId + ' .request-ride-btn');
                 if (data.predicted_cost) {
                     const cost = data.predicted_cost.toFixed(2);
-                    costDisplay.textContent = 'Estimated Cost: ₹' + cost;
+                    costDisplay.innerHTML = `<i class="fas fa-coins mr-2"></i> ${cost} Points`;
+                    costDisplay.style.display = 'inline-block';
                     costInput.value = cost;
                     requestButton.style.display = 'block';
+                    
+                    // Add animation for cost display
+                    costDisplay.style.animation = 'none';
+                    setTimeout(() => {
+                        costDisplay.style.animation = 'pulse 1s';
+                    }, 10);
                 } else {
-                    costDisplay.textContent = 'Error calculating cost';
+                    costDisplay.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i> Error calculating cost';
+                    costDisplay.style.display = 'inline-block';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('cost-' + rideId).textContent = 'Error calculating cost';
+                costDisplay.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i> Error calculating cost';
+                costDisplay.style.display = 'inline-block';
             });
         }
+        
+        // Add pulse animation
+        document.head.insertAdjacentHTML('beforeend', `
+            <style>
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+            </style>
+        `);
     </script>
 </body>
 </html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate User - ShareRide</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <style>
+        .rating {
+            display: inline-flex;
+            position: relative;
+            height: 50px;
+            line-height: 50px;
+            font-size: 50px;
+        }
+
+        .rating label {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .rating label .icon {
+            color: #ccc;
+        }
+
+        .rating label .icon.filled {
+            color: #ffd700;
+        }
+
+        .rating label input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .rating-container {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Rate User</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="rating-container">
+                                <div class="rating" id="star-rating">
+                                    <label>
+                                        <input type="radio" name="rating" value="1" required />
+                                        <span class="icon"><i class="fas fa-star"></i></span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="rating" value="2" />
+                                        <span class="icon"><i class="fas fa-star"></i></span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="rating" value="3" />
+                                        <span class="icon"><i class="fas fa-star"></i></span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="rating" value="4" />
+                                        <span class="icon"><i class="fas fa-star"></i></span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="rating" value="5" />
+                                        <span class="icon"><i class="fas fa-star"></i></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button type="submit" class="btn btn-primary">Submit Rating</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const starRating = document.getElementById('star-rating');
+            const starLabels = starRating.querySelectorAll('label');
+
+            starLabels.forEach((label, index) => {
+                label.addEventListener('click', () => {
+                    // Remove filled class from all stars
+                    starLabels.forEach(l => l.querySelector('.icon').classList.remove('filled'));
+                    
+                    // Fill stars up to and including the clicked star
+                    for (let i = 0; i <= index; i++) {
+                        starLabels[i].querySelector('.icon').classList.add('filled');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

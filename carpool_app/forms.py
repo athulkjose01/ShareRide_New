@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import SetPasswordForm
 from django.core.exceptions import ValidationError
 import re
-from .models import RideGiver
+from .models import Ride, RideGiver
 
 
 
@@ -11,11 +11,16 @@ class RideForm(forms.Form):
     destination = forms.CharField(label='Destination', max_length=255)
 
 
+class RideCreateForm(forms.Form):
+    start_location = forms.CharField(label='Start Location', max_length=255)
+    destination = forms.CharField(label='Destination', max_length=255)
+
+
 
 class RideGiverForm(forms.ModelForm):
     class Meta:
         model = RideGiver
-        fields = ['car', 'features', 'fuel_type', 'mobile_number']
+        fields = ['car', 'features', 'fuel_type', 'vehicle_number']
 
 
 
