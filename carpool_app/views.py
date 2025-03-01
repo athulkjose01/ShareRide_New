@@ -26,7 +26,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.db.models import Count
 from django.utils import timezone 
-import google.generativeai as genai
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
@@ -65,13 +64,11 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic.edit import UpdateView
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-import pickle
 import numpy as np
 import requests
 from django.http import JsonResponse
 from django.shortcuts import render
 from .models import UserProfile
-from twilio.rest import Client
 from django.utils.timezone import now
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
@@ -654,32 +651,6 @@ def match_rides(request):
         'matched_rides': matched_rides
     })
 
-
-def load_model_and_encoders():
-    # Directory where views.py (and app directory) is located
-    app_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Paths to the models and encoders
-    model_path = os.path.join(app_dir, 'ml_models', 'random_forest_model.pkl')
-    label_encoder_model_path = os.path.join(app_dir, 'ml_models', 'label_encoder_model.pkl')
-    label_encoder_fuel_path = os.path.join(app_dir, 'ml_models', 'label_encoder_fuel.pkl')
-
-    # Load Random Forest model
-    with open(model_path, 'rb') as file:
-        model = pickle.load(file)
-
-    # Load Label Encoder for model
-    with open(label_encoder_model_path, 'rb') as file:
-        label_encoder_model = pickle.load(file)
-
-    # Load Label Encoder for fuel
-    with open(label_encoder_fuel_path, 'rb') as file:
-        label_encoder_fuel = pickle.load(file)
-
-    return model, label_encoder_model, label_encoder_fuel
-
-
-model, label_encoder_model, label_encoder_fuel = load_model_and_encoders()
 
 
 CAR_RATINGS = {
