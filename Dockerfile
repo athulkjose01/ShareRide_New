@@ -8,7 +8,7 @@ ENV DATABASE_URL=postgres://postgres:Athulkjose123.@postgres.ctcsogy4gek9.eu-nor
 ENV SECRET_KEY=django-insecure-$(=ul33q32p^b%rmik6r)@ki5g(7_ofdw^ojg&)*4c#ww^!--o
 ENV EMAIL_HOST_USER=athul.23pmc116@mariancollege.org
 ENV EMAIL_HOST_PASSWORD=zklgvlvjrkjaprmv
-ENV GROQ_API_KEY=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
+ENV GROQ_API_KEY=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
 ENV GOOGLE_MAPS_API_KEY=AIzaSyBnX3vMyrAvLILwOvs7c8P9soMWP7D3TEI
 
 # Add system dependencies

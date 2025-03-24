@@ -1398,7 +1398,7 @@ def chatbot(request):
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=messages,
-                model="mixtral-8x7b-32768",
+                model="llama3-70b-8192",
             )
             response = chat_completion.choices[0].message.content
 

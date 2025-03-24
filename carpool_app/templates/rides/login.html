@@ -5,11 +5,28 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
+            background-image: url('/api/placeholder/1200/800');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: -1;
         }
 
         span {
@@ -17,28 +34,6 @@
             color: #000;
             padding: 6px;
             border-radius: 5px;
-        }
-
-        .form-container {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-            border: 2px solid #333;
-            border-radius: 10px;
-            background-color: #f8f9fa;
-        }
-
-
-        a {
-            text-align: center;
-            display: block;
-            color: #007bff;
-        }
-
-        .alert {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
         }
 
         .header {
@@ -75,52 +70,154 @@
             color: #4CAF50 !important;
         }
 
-        .btn-custom {
-            background-color: #4CAF50;
-            border-color: #4CAF50;
-            color: white;
-        }
-
-        .btn-custom:hover {
-            background-color: #45a049;
-            border-color: #45a049;
-        }
-
         .form-container {
+            max-width: 450px;
+            margin: 60px auto;
+            padding: 35px;
+            border: none;
+            border-radius: 15px;
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin-top: 2rem;
-            margin-left: auto;
-            margin-right: auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.6s ease forwards;
+        }
+        
+        .form-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: linear-gradient(180deg, #4CAF50, #8BC34A);
         }
 
         h2 {
             text-align: center;
-            color: black;
-            margin-bottom: 20px;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        h2:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
         }
 
+        .form-control {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+        
+        .form-control:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.15);
+        }
+
+        .input-with-icon {
+            padding-left: 40px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+            border: none;
+            padding: 12px;
+            font-weight: 500;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #43a047 0%, #7cb342 100%);
+            box-shadow: 0 6px 18px rgba(76, 175, 80, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        a {
+            color: #4CAF50;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        a:hover {
+            color: #3d8b40;
+            text-decoration: underline;
+        }
+
+        .alert {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #d9534f;
+            background-color: #fdf7f7;
+            color: #a94442;
+            text-align: left;
+        }
+        
+        .alert-danger {
+            background-color: #fdf7f7;
+            border-color: #d9534f;
+            color: #a94442;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        .divider:before, .divider:after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+        
+        .divider span {
+            padding: 0 10px;
+            background-color: transparent;
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
         #map {
             height: 400px;
             width: 100%;
             border-radius: 10px;
             margin-top: 1rem;
         }
-
-        .login-button {
-            color: black;
-            font-weight: bold;
-            margin-top: 5px;
-            display: block;
-            text-align: center;
-        }
-
-        .alert {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
+        
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnX3vMyrAvLILwOvs7c8P9soMWP7D3TEI&libraries=places,geometry"></script>
@@ -149,45 +246,64 @@
     </nav>
 
     {% block content %}
-    <div class="form-container">
-        <h2>Login</h2>
-        <form method="post" action="{% url 'login' %}">
-            {% csrf_token %}
-            {{ form.as_p }}
+    <div class="container">
+        <div class="form-container">
+            <h2>Welcome Back</h2>
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
 
-            <!-- Email input -->
-            <div class="form-outline mb-4">
-                <input type="text" id="id_username" name="username" placeholder="Username" class="form-control" required />
-            </div>
-
-            <!-- Password input -->
-            <div class="form-outline mb-4">
-                <input type="password" id="id_password" name="password" placeholder="Password" class="form-control" required />
-            </div>
-
-            <!-- Checkbox for showing password -->
-                <center>
-                    <input type="checkbox" id="show_password" onclick="togglePasswordVisibility()"> Show Password
-                </center>
-                <br>
-
-
-            <!-- Submit button -->
-            <button type="submit" class="btn btn-primary btn-block mb-4">Sign in</button>
-
-            <!-- Forgot password and register links -->
-            <div class="text-center">
-                <a href="{% url 'password_reset' %}">Forgot password?</a>
-                <p>Don't have an account? <a href="{% url 'register' %}">Register</a></p>
-            </div>
-
-            <!-- Display error message if exists -->
-            {% if error_message %}
-                <div class="alert alert-danger">
-                    <center>{{ error_message }}</center>
+                <!-- Username input -->
+                <div class="form-outline mb-4">
+                    <div class="position-relative">
+                        <i class="fas fa-user position-absolute" style="top: 14px; left: 15px; color: #aaa;"></i>
+                        <input type="text" id="id_username" name="username" placeholder="Username" class="form-control input-with-icon" required />
+                    </div>
                 </div>
-            {% endif %}
-        </form>
+
+                <!-- Password input -->
+                <div class="form-outline mb-4">
+                    <div class="position-relative">
+                        <i class="fas fa-lock position-absolute" style="top: 14px; left: 15px; color: #aaa;"></i>
+                        <input type="password" id="id_password" name="password" placeholder="Password" class="form-control input-with-icon" required />
+                    </div>
+                </div>
+
+                <!-- Checkbox for showing password -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="show_password" onclick="togglePasswordVisibility()">
+                    <label for="show_password" class="mb-0 ms-2">Show Password</label>
+                </div>
+
+                <!-- Submit button -->
+                <button type="submit" class="btn btn-primary btn-block mb-4">
+                    <i class="fas fa-sign-in-alt me-2"></i> Sign in
+                </button>
+
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+                <!-- Forgot password and register links -->
+                <div class="text-center mt-3">
+                    <a href="{% url 'password_reset' %}" class="d-block mb-2">
+                        <i class="fas fa-key me-1"></i> Forgot password?
+                    </a>
+                    <p class="mt-2 mb-0">Don't have an account? 
+                        <a href="{% url 'register' %}" class="ms-1 fw-bold">
+                            <i class="fas fa-user-plus me-1"></i> Register now
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Display error message if exists -->
+                {% if error_message %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i> {{ error_message }}
+                    </div>
+                {% endif %}
+            </form>
+        </div>
     </div>
     {% endblock %}
 
